@@ -75,15 +75,18 @@ sub messages_handle {
                 last;
             };
             $command eq 'DATA_SYSEX' and do {
+                my $sysex_data = $self->{sysex_data};
+                push @$sysex_data, @$data;
                 last;
             };
             $command eq 'END_SYSEX' and do {
+                my $sysex_data = $self->{sysex_data};
+                $self->{sysex_data} = [];
                 last;
             };
 
         };
 
-use Data::Dumper; warn Dumper $self;
         print "$command : \n";
     }
 
