@@ -276,6 +276,34 @@ sub message_packet_parse {
 
 }
 
+sub sysex_parse {
+# --------------------------------------------------
+# Takes the sysex data buffer and parses it into 
+# something useful
+#
+    my ( $self, $sysex_data ) = @_;
+
+    my $protocol_version  = $self->{protocol_version};
+    my $protocol_commands = $COMMANDS->{$protocol_version};
+    my $protocol_lookup   = $COMMAND_LOOKUP->{$protocol_version};
+
+    my $command = shift @$sysex_data;
+
+    $command == $protocol_commands->{REPORT_FIRMWARE} and do {
+        my $major_version = shift @$sysex_data;
+        my $minor_version = shift @$sysex_data;
+#        my $firmware      = pack "B*", join "", map { substr(unpack("B*",chr($_)),1,7) } @$sysex_data;
+        my $firmware      = join "", map {chr$_} @$sysex_data;
+        return {
+            command     => $command,
+            command_str => $protocol_lookup->{$command}||'UNKNOWN',
+            data        => [$major_version,$minor_version,$firmware]
+        };
+    };
+
+    return;
+}
+
 sub message_prepare {
 # --------------------------------------------------
 # Using the midi protocol, create a binary packet

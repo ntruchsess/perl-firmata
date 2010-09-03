@@ -81,6 +81,8 @@ sub messages_handle {
             };
             $command eq 'END_SYSEX' and do {
                 my $sysex_data = $self->{sysex_data};
+                my $sysex_message = $proto->sysex_parse($sysex_data);
+                $self->sysex_handle($sysex_message);
                 $self->{sysex_data} = [];
                 last;
             };
@@ -90,6 +92,23 @@ sub messages_handle {
         print "$command : \n";
     }
 
+}
+
+sub sysex_handle {
+# --------------------------------------------------
+# Receive identified sysex packets and convert them
+# into their appropriate structures and parse
+# them as required
+#
+    my ( $self, $sysex_message ) = @_;
+
+    my $data = $sysex_message->{data};
+
+    $sysex_message->{command_str} eq 'REPORT_FIRMWARE' and do {
+        $self->{metadata}{firmware_version} = sprintf "V_%i_%02i", $data->[0], $data->[1];
+        $self->{metadata}{firmware} = $data->[2];
+        return;
+    };
 }
 
 sub probe {
@@ -134,7 +153,6 @@ sub probe {
             return $self->{metadata}{firmware_version};
         }
     }
-
 }
 
 

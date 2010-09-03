@@ -11,3 +11,4 @@ my $device = Firmata::Arduino::Tied->open('/dev/ttyUSB0');
 
 $device->probe;
 
+die Dumper $device->{metadata};
