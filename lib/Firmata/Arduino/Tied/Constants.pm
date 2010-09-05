@@ -4,12 +4,31 @@ use strict;
 use Exporter;
 use vars qw/ 
             @ISA @EXPORT_OK %EXPORT_TAGS 
+            $BASE
+            $DEVICES
             $COMMANDS $COMMAND_NAMES
             $COMMAND_LOOKUP 
         /;
 @ISA = 'Exporter';
 
-# First we need to apply all the available protocols
+# Basic commands and constants
+use constant ($BASE={
+    PIN_INPUT  => 0,
+    PIN_OUTPUT => 1,
+    PIN_ANALOG => 2,
+    PIN_PWM    => 3,
+    PIN_SERVO  => 4,
+
+    PIN_LOW    => 0,
+    PIN_HIGH   => 1,
+});
+
+$DEVICES => {
+    'arduino_dumilanove' => {},
+};
+
+
+# We need to apply all the available protocols
 use constant ( $COMMANDS = {
 
     V_2_01 => {
@@ -89,6 +108,7 @@ use constant {
 
 @EXPORT_OK = (
     @$COMMAND_NAMES,
+    keys %$BASE,
     keys %$COMMANDS,
     qw( $COMMANDS $COMMAND_NAMES $COMMAND_LOOKUP )
 );

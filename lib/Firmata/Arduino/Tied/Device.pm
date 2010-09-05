@@ -18,7 +18,8 @@ use Firmata::Arduino::Tied::Base
         sysex_mode       => undef,
         sysex_data       => [],
 
-# For the status of individual pins
+# To track internal status
+        ports            => [],
         pins             => {},
 
 # For information about the device. eg: firmware version
@@ -89,7 +90,7 @@ sub messages_handle {
 
         };
 
-        print "$command : \n";
+        print "    < $command\n";
     }
 
 }
@@ -155,5 +156,67 @@ sub probe {
     }
 }
 
+sub pin_mode {
+# --------------------------------------------------
+# Analogous to the pinMode function on the 
+# arduino
+# 
+    my ( $self, $pin, $mode ) = @_;
+
+    my $port_number = $pin >> 3;
+    my $mode_packet = $self->{protocol}->message_prepare( REPORT_DIGITAL => $port_number, 1 );
+    $self->{io}->data_write($mode_packet);
+
+    my $mode_packet = $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
+    return $self->{io}->data_write($mode_packet);
+}
+
+sub digital_write {
+# --------------------------------------------------
+# Analogous to the digitalWrite function on the 
+# arduino
+#
+    my ( $self, $pin, $state ) = @_;
+    my $port_number = $pin >> 3;
+
+    my $pin_offset  = $pin % 8;
+    my $pin_mask    = 1<<$pin_offset;
+
+    my $port_state  = $self->{ports}[$port_number] ||= 0;
+    if ( $state ) {
+        $port_state |= $pin_mask;
+    }
+    else {
+        $port_state &= $pin_mask ^ 0xff;
+    }
+    $self->{ports}[$port_number] = $port_state;
+
+    my $mode_packet = $self->{protocol}->message_prepare( DIGITAL_MESSAGE => $port_number, $port_state);
+    return $self->{io}->data_write($mode_packet);
+}
+
+sub digital_read {
+# --------------------------------------------------
+# Analogous to the digitalRead function on the 
+# arduino
+# 
+    my ( $self, $pin ) = @_;
+    my $port_number = $pin >> 3;
+    my $mode_packet = $self->{protocol}->message_prepare( REPORT_DIGITAL => $port_number => 1 );
+    return $self->{io}->data_write($mode_packet);
+}
+
+sub poll {
+# --------------------------------------------------
+# Call this function every once in a while to
+# check up on the status of the comm port, receive
+# and process data from the arduino
+#
+    my $self = shift;
+    my $buf = $self->{io}->data_read(100) or return;
+    my $messages = $self->{protocol}->message_data_receive($buf);
+    $self->messages_handle($messages);
+    return $messages;
+}
 
 1;

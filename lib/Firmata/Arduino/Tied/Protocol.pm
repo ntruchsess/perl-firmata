@@ -31,6 +31,7 @@ $MIDI_DATA_SIZES = {
     0xF0 => 0, # note that this requires special handling
 
 # Special for version queries
+    0xF4 => 2,
     0xF9 => 2,
 };
 
@@ -91,12 +92,9 @@ sub message_data_receive {
     my $protocol_commands = $COMMANDS->{$protocol_version};
     my $protocol_lookup   = $COMMAND_LOOKUP->{$protocol_version};
 
-    print ">".join(",",map{sprintf '%02x', ord($_)}split//,$data)."<\n";
 # Add the new data to the buffer
     my $buffer = $self->{buffer} ||= [];
     push @$buffer, unpack "C*", $data;
-
-    print "<".join(",",@$buffer).">\n";
 
     my @packets;
 
@@ -136,7 +134,7 @@ sub message_data_receive {
             my $command = shift @data;
             push @packets, {
                 command => $command,
-                command_str => $protocol_lookup->{$command}||'UNKNOWN',
+                command_str => $protocol_lookup->{$command}||$protocol_lookup->{$command&0xf0}||'UNKNOWN',
                 data    => \@data
             };
         }
@@ -309,9 +307,14 @@ sub message_prepare {
 # Using the midi protocol, create a binary packet
 # that can be transmitted to the serial output
 #
-    my ( $self, $command, @data ) = @_;
-    my $bytes = 1+$MIDI_DATA_SIZES->{$command & 0xf0};
-    my $packet = pack "C"x$bytes, $command, @data;
+    my ( $self, $command_name, $channel, @data ) = @_;
+
+    my $protocol_version  = $self->{protocol_version};
+    my $protocol_commands = $COMMANDS->{$protocol_version};
+    my $command = $protocol_commands->{$command_name} or return;
+
+    my $bytes = 1+($MIDI_DATA_SIZES->{$command & 0xf0}||$MIDI_DATA_SIZES->{$command});
+    my $packet = pack "C"x$bytes, $command|$channel, @data;
     return $packet;
 }
 
