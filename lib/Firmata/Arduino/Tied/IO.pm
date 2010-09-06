@@ -32,7 +32,7 @@ sub data_write {
 # Dump a bunch of data into the comm port
 #
     my ( $self, $buf ) = @_;
-    print ">".join(",",map{sprintf"%02x",ord$_}split//,$buf)."\n";
+    $Firmata::Arduino::Tied::DEBUG and print ">".join(",",map{sprintf"%02x",ord$_}split//,$buf)."\n";
     return $self->{handle}->write( $buf );
 }
 
@@ -43,7 +43,7 @@ sub data_read {
 #
     my ( $self, $bytes ) = @_;
     my ( $count, $string ) = $self->{handle}->read($bytes);
-    if ( $string ) {
+    if ( $Firmata::Arduino::Tied::DEBUG and $string ) {
         print "<".join(",",map{sprintf"%02x",ord$_}split//,$string)."\n";
     }
     return $string;

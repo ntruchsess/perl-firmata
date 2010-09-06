@@ -11,19 +11,31 @@ my $device = Firmata::Arduino::Tied->open('/dev/ttyUSB0');
 
 $device->probe;
 
-$device->pin_mode(13=>PIN_OUTPUT);
+#$device->pin_mode(13=>PIN_OUTPUT);
 
 # Set the pull high value
-$device->pin_mode(12=>PIN_OUTPUT);
-$device->digital_write(12=>1);
+#$device->pin_mode(12=>PIN_OUTPUT);
+#$device->digital_write(12=>1);
 
 # Set pin to input
-$device->pin_mode(12=>PIN_INPUT);
+#$device->pin_mode(12=>PIN_INPUT);
+
+# Set PWM pin
+#$device->pin_mode(3=>PIN_PWM);
+
+# Set Analog pin
+$device->pin_mode(1=>PIN_ANALOG);
 
 my $iteration = 0;
+
+#$Firmata::Arduino::Tied::DEBUG = 1;
+
 while (1) {
     $device->poll;
-    $device->digital_write(13=>($iteration++%2));
-    select undef,undef,undef,0.1;
+    print $device->analog_read(1)."\n";
+#    my $strobe_state = $iteration++%2;
+#    $device->digital_write(13=>$strobe_state);
+#    $device->analog_write(3=>( $iteration % 256 ) );
+    select undef,undef,undef,0.01;
 }
 

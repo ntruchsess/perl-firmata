@@ -20,6 +20,7 @@ use Firmata::Arduino::Tied::Base
 
 # To track internal status
         ports            => [],
+        analog_pins      => [],
         pins             => {},
 
 # For information about the device. eg: firmware version
@@ -62,8 +63,18 @@ sub messages_handle {
 
 # Handle pin messages
             $command eq 'DIGITAL_MESSAGE' and do {
-                $self->{pins}{digital} = 1;
+                my $port_number = $message->{command} & 0x0f;
+                my $port_state  = $data->[0] | ($data->[1] << 7);
+                $self->{ports}[$port_number] = $port_state;
             };
+
+# Handle analog pin messages
+            $command eq 'ANALOG_MESSAGE' and do {
+                my $pin_number = $message->{command} & 0x0f;
+                my $pin_value = ( $data->[0] | ($data->[1] << 7) ) / 1023;
+                $self->{analog_pins}[$pin_number] = $pin_value;
+            };
+
 
 # Handle metadata information
             $command eq 'REPORT_VERSION' and do {
@@ -89,8 +100,8 @@ sub messages_handle {
             };
 
         };
-
-        print "    < $command\n";
+ 
+        $Firmata::Arduino::Tied::DEBUG and print "    < $command\n";
     }
 
 }
@@ -158,17 +169,34 @@ sub probe {
 
 sub pin_mode {
 # --------------------------------------------------
-# Analogous to the pinMode function on the 
+# Similar to the pinMode function on the 
 # arduino
 # 
     my ( $self, $pin, $mode ) = @_;
 
-    my $port_number = $pin >> 3;
-    my $mode_packet = $self->{protocol}->message_prepare( REPORT_DIGITAL => $port_number, 1 );
-    $self->{io}->data_write($mode_packet);
+    if ( $mode == PIN_INPUT or $mode == PIN_OUTPUT ) {
+        my $port_number = $pin >> 3;
+        my $mode_packet = $self->{protocol}->message_prepare( REPORT_DIGITAL => $port_number, 1 );
+        $self->{io}->data_write($mode_packet);
 
-    my $mode_packet = $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
-    return $self->{io}->data_write($mode_packet);
+        my $mode_packet = $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
+        return $self->{io}->data_write($mode_packet);
+    }
+
+    elsif ( $mode == PIN_PWM ) {
+        my $mode_packet = $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
+        return $self->{io}->data_write($mode_packet);
+    }
+
+    elsif ( $mode == PIN_ANALOG ) {
+        my $port_number = $pin >> 3;
+        my $mode_packet = $self->{protocol}->message_prepare( REPORT_ANALOG => $port_number, 1 );
+        $self->{io}->data_write($mode_packet);
+
+        my $mode_packet = $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
+        return $self->{io}->data_write($mode_packet);
+    }
+
 }
 
 sub digital_write {
@@ -202,9 +230,33 @@ sub digital_read {
 # 
     my ( $self, $pin ) = @_;
     my $port_number = $pin >> 3;
-    my $mode_packet = $self->{protocol}->message_prepare( REPORT_DIGITAL => $port_number => 1 );
+    my $pin_offset  = $pin % 8;
+    my $pin_mask    = 1<<$pin_offset;
+    my $port_state = $self->{ports}[$port_number] ||= 0;
+    return( $port_state & $pin_mask ? 1 : 0 );
+}
+
+sub analog_read {
+# --------------------------------------------------
+# Fetches the analog value of a pin 
+#
+    my ( $self, $pin ) = @_;
+    return $self->{analog_pins}[$pin];
+}
+
+sub analog_write {
+# --------------------------------------------------
+# Sets the PWM value on an arduino
+#
+    my ( $self, $pin, $value ) = @_;
+
+# FIXME: 8 -> 7 bit translation should be done in the protocol module
+    my $byte_0 = $value & 0x7f;
+    my $byte_1 = $value >> 7;
+    my $mode_packet = $self->{protocol}->message_prepare( ANALOG_MESSAGE => $pin, $byte_0, $byte_1 );
     return $self->{io}->data_write($mode_packet);
 }
+*pwm_write = *analog_write;
 
 sub poll {
 # --------------------------------------------------

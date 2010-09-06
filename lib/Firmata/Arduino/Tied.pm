@@ -1,12 +1,15 @@
 package Firmata::Arduino::Tied;
 
 use strict;
+use vars qw/ $DEBUG /;
 use Firmata::Arduino::Tied::Constants;
 use Firmata::Arduino::Tied::Device;
 use Firmata::Arduino::Tied::Base
     ISA => 'Firmata::Arduino::Tied::Base',
     FIRMATA_ATTRIBS => {
     };
+
+$DEBUG = 0;
 
 sub open {
 # --------------------------------------------------
