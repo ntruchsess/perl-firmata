@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html class="no-js">
+  <head>
+    <title>Digital Electronics with Perl and Arduino</title>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <script type="text/javascript">(function(H){H.className=H.className.replace(/\bno-js\b/,'js')})(document.documentElement)</script> 
+    <link href="stylesheets/screen.css" type="text/css" rel="stylesheet" media="Screen,projection" />
+  </head>
+  <body>
+    <img src="images/HappySkies.png" class="source-image" alt="" />
+    <div id="header">
+      <div class="container">
+        <h1>Arduino Control from Perl</h1>
+      </div>
+    </div>
+
+    <div id="content">
+      <div id="slides">
+
+        <div class="slide title">
+          <h2>Controlling an Arduino with Perl</h2>
+        </div>
+
+        <div class="slide">
+          <h2>Outline</h2>
+          <p>
+            <ul>
+              <li>Quick intros on Arduino</li>
+              <li>Quick intros on Firmata</li>
+              <li>Quick intros on Demo Perl Library</li>
+              <li>Practical Example - Specifications Parsing</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>What's an Arduino?</h2>
+          <p>
+            <img src="images/ArduinoDuemilanove.png" alt="" style="float:left;margin-right:1em" />
+            <ul>
+              <li>Hobbyist's Microcontroller Development Platform</li>
+              <li>Both Hardware and Software</li>
+            </ul>
+            <br/>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Arduino's Hardware (One example!):</h2>
+          <p style="min-height:7em">
+            <img src="images/ArduinoDuemilanove.png" alt="" style="float:left" />
+            One part uC...<br/><br/>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Arduino's Software:</h2>
+          <p style="min-height:10em">
+            <img src="images/ArduinoIDE.png" alt="" style="float:left;width:9em;margin-right:1em" />
+            Another part IDE...<br/><br/>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Quick Arduino Example (Blink):</h2>
+          <p>
+
+            <object style="float:left;width:10em;height:7em;margin:.5em 1em 0 0">
+              <param name="movie" value="http://www.youtube-nocookie.com/v/XPL5L4WdsiQ?fs=1&amp;hl=en_US&amp;rel=0"></param>
+              <param name="allowFullScreen" value="true"></param>
+              <param name="allowscriptaccess" value="always"></param>
+              <embed src="http://www.youtube-nocookie.com/v/XPL5L4WdsiQ?fs=1&amp;hl=en_US&amp;rel=0" 
+                     type="application/x-shockwave-flash" 
+                     allowscriptaccess="always" 
+                     allowfullscreen="true" 
+                     ></embed>
+            </object>
+
+            <pre>
+void setup() {                
+  pinMode(13, OUTPUT);  // LED is connected to pin 13
+}
+
+void loop() {
+  digitalWrite(13, HIGH);   // set the LED on
+  delay(1000);                  // wait for a second
+  digitalWrite(13, LOW);    // set the LED off
+  delay(1000);                  // wait for a second
+}
+            </pre>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Why's Arduino Cool?</h2>
+          <p>
+            <ul>
+              <li>Easy</li>
+              <li>Mindshare</li>
+              <li>Support and Accessibility</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Firmata:</h2>
+          <p>
+            <a href="http://www.firmata.org" target="_blank">http://www.firmata.org</a><br/>
+            "Firmata is a generic protocol for communicating with microcontrollers from software on a host computer. It is intended to work with any host computer software package."
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>In pragmatic terms...</h2>
+          <p style="min-height:8em">
+            <img src="images/bear-work.png" style="float:right;width:9em" title="Pedobear learns to use an Arduino" />
+            System to control Arduino IO pins from a computer.<br/>
+            <br/>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>How does it work?</h2>
+          <p>
+            <ul>
+              <li>Computer runs client code</li>
+              <li>Serial communication</li>
+              <li>Arduino runs host code</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Control Example</h2>
+          <p>
+            <a href="http://www.firmata.org/wiki/Proposals#User_Friendly_GUI_Queries" target="_blank">Firmata GUI Clients</a>
+            <img src="images/firmatagui.png" style="float:left;height:9em;margin-right:1em" />
+            <div style="clear:both"></div>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Communication Protocol</h2>
+          <p>
+
+            <object style="float:right;width:10em;height:7em;margin:.25em 0 0 1em">
+              <param name="movie" value="http://www.youtube-nocookie.com/v/Q-VWdPGGTT8?fs=1&amp;hl=en_US&amp;rel=0"></param>
+              <param name="allowFullScreen" value="true"></param>
+              <param name="allowscriptaccess" value="always"></param>
+              <embed src="http://www.youtube-nocookie.com/v/Q-VWdPGGTT8?fs=1&amp;hl=en_US&amp;rel=0" 
+                     type="application/x-shockwave-flash" 
+                     allowscriptaccess="always" 
+                     allowfullscreen="true" 
+                     ></embed>
+            </object>
+
+            <ul style="min-height:8em">
+              <li>MIDI usually used for electronic instruments</li>
+              <li>Redefine MIDI messages for IO</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>MIDI for Firmata</h2>
+          <p>
+            <ul>
+              <li>8-bit protocol</li>
+              <li>
+                Top bit indicates data or command <br/>
+                <table class="bitfield">
+                  <tr>
+                    <td>c/d</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                  </tr>
+                </table>
+              </li>
+              <li>Variable packet length</li>
+              <li>Has interruptible data-stream mode</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Example Firmata Protocol</h2>
+          <p>
+            <ul>
+              <li>Digital Pin 11 On
+
+                <table class="bitfield">
+
+                  <tr>
+                    <td>HEX</td>
+                    <td>c</td>
+                    <td colspan="3">CMD</td>
+                    <td colspan="4">PORT</td>
+                  </tr>
+
+                  <tr class="command">
+                    <td class="hex">0x91</td>
+                    <td class="cdflag">1</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>1</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>1</td>
+                  </tr>
+                </table>
+
+                <table class="bitfield">
+                  <tr class="data">
+                    <td class="hex">0x04</td>
+                    <td class="cdflag">0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>1</td>
+                    <td>0</td>
+                    <td>0</td>
+                  </tr>
+                </table>
+
+                <table class="bitfield">
+                  <tr class="data">
+                    <td class="hex">0x00</td>
+                    <td class="cdflag">0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                  </tr>
+                </table>
+
+              </li>
+              <li><a href="http://www.firmata.org/wiki/Protocol">v2.1 Protocol</a></li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Perl Based Interface</h2>
+          <p>
+            Work in progress: <a href="http://github.com/amimoto/perl-firmata" target="_blank">Device::Firmata</a><br/><br/>
+            <ul>
+              <li>Simple interface</li>
+              <li>Use Device::SerialPort</li>
+              <li>Use simple objects</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Example: Blink</h2>
+          <p>
+            <pre>
+#!/usr/bin/perl
+
+use strict;
+use Device::Firmata;
+
+my $device = Device::Firmata->open('/dev/ttyUSB0');
+
+$device->pin_mode(13=>PIN_OUTPUT);
+while (1) {
+    $device->digital_write(13=>1);
+    sleep(1);
+    $device->digital_write(13=>0);
+    sleep(1);
+}</pre>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Non-demonstrated Features</h2>
+          <p>
+            <ul>
+              <li>Digital Input - <small>$device-&gt;digital_read($pin)</small></li>
+              <li>Analog Input - <small>$device-&gt;analog_read($pin)</small></li>
+              <li>PWM! - <small>$device-&gt;analog_write($pin)</small></li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Practical Uses?</h2>
+          <p>
+            <ul>
+              <li>Education/Study</li>
+              <li>I/O for desktop applications (Very Poor Man's <a href="http://labjack.com/" target="_blank">Labjack</a>)</li>
+              <li>Exploring new hardware interfaces</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Example: Interface Exploration</h2>
+          <p style="min-height:7em">
+            <a href="http://www.sureelectronics.net/goods.php?id=1119" target="_blank">Sure Electronics: Red LED Matrix Board</a><br/>
+            <img src="images/sureelectronics-32x8matrix.png" style="width:9em;float:left" />
+            - 32x8 matrix<br/>
+            - Driver IC: HT1632<br/>
+            - <a href="images/DE-DP105_Ver1.0_EN_0.pdf" target="_blank">Specifications</a>...
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>HT1632 Specifications</h2>
+          <p style="min-height:8em">
+            Ugh.<br/><br/>
+
+            <img src="images/HT1632-spec-0.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-1.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-2.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-3.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-4.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-5.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-6.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-7.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-8.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-9.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-10.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-11.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-12.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-13.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-14.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-15.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-16.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-17.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-18.png" style="float:left;margin:2px;width:2em" />
+            <img src="images/HT1632-spec-19.png" style="float:left;margin:2px;width:2em" />
+
+            <div style="clear:both">&nbsp;</div>
+
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Prototyping the Interface</h2>
+          <p>
+            <ul>
+              <li>Avoid save, compile, upload, reset, disappointment cycle!</li>
+            </ul>
+            <p><b>SO:</b></p>
+            <ul>
+              <li>Use Arduino drive IO pins</li>
+              <li>Write Perl code to implement signals</li>
+              <li>Use Firmata to link Arduino and Perl</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Connection Diagram</h2>
+          <p>
+            <img src="images/sureelectronics-32x8matrix-back2.png" style="height:8em" />
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Connection Diagram</h2>
+          <p>
+            <img src="images/sureelectronics-32x8matrix-back.png" style="height:8em" />
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Logic Timings</h2>
+          <p>
+            <img src="images/write-signal-logic.png" width="100%" />
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Game Plan</h2>
+          <p>
+            <ul>
+              <li>1. Strobe CS pin</li>
+              <li>2. Clock data in</li>
+              <li>???</li>
+              <li>4. <s>Profit!</s> Display cool things!</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Pin Strobe Code</h2>
+          <p>
+           <pre># $pin = pin connected CS
+# $PULSE_LEN = 0.001s
+
+$device-&gt;digital_write($pin=>1);
+select undef, undef, undef, $PULSE_LEN;
+$device-&gt;digital_write($pin=>0);
+select undef, undef, undef, $PULSE_LEN;
+           </pre> 
+          </p>
+        </div>
+
+
+        <div class="slide">
+          <h2>Data Writing</h2>
+          <p>
+           <pre># $data_pin = connected DATA line
+# $wr_pin = connected to WR line
+# $PULSE_LEN = 0.001s
+
+$device-&gt;digital_write($data_pin=>$v);
+$device-&gt;digital_write($wr_pin=>1);
+select undef, undef, undef, $PULSE_LEN;
+$device-&gt;digital_write($wr_pin=>0);
+select undef, undef, undef, $PULSE_LEN;
+           </pre> 
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Applied Example</h2>
+          <p>
+            <ul>
+              <li>Full detail of code not discussed.</li>
+              <li>Can draw lines!</li>
+              <li>Can draw graphs!</li>
+              <li>Can draw words!</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Prototyping!!!</h2>
+          <p>
+            <ul>
+              <li>Bandwidth limitations</li>
+              <li>MIDI interpreter limitations</li>
+              <li>Computer controlled microcontroller?!</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Summary</h2>
+          <p>
+            <ul>
+              <li>Arduino = Cool Prototyping Platform</li>
+              <li>Firmata = Cool Protocol to control Arduino</li>
+              <li>Perl = RAD tool to script interactions with the real world</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide" style="text-align:center">
+          <p>
+            http://bako.ca/pm/firmata<br/>
+            <p style="font-size:12em">??</p>
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <div id="footer">
+      <div class="container">
+        &copy; 2010 Aki Mimoto
+      </div>
+    </div>
+    <script type="text/javascript" src="scripts/dd_roundies.js"></script>
+    <script type="text/javascript" src="scripts/jquery.js"></script>
+    <script type="text/javascript" src="scripts/jquery.presentation-full.js"></script>
+    <script type="text/javascript" src="scripts/global.js"></script>
+    <script>
+        $(function(){
+            DD_roundies.addRule('.slide-frame', '30px', true);
+        });
+    </script>
+
+  </body>
+</html>

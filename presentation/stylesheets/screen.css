@@ -1,0 +1,191 @@
+/* @group reset */
+    html, body, div, span, object, iframe, h1, h2, h3, h4, h5, h6, p, 
+    blockquote, pre, a, abbr, acronym, address, code, del, dfn, em, img, 
+    q, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, .btn 
+    { margin: 0; padding: 0; border: 0; font-size: 100%; font-family: inherit; vertical-align: baseline }
+    a img, frameset { border: 0; }
+    table {	border-collapse: collapse; border-spacing: 0; }
+    caption, th, td { text-align: left;	font-weight: normal; }
+    blockquote:before, blockquote:after, q:before, q:after { content: ""; }
+    blockquote, q {	quotes: "" ""; }
+/* @end */
+
+/* @group utility */
+    .hide { display: none; }
+    .contain-overflow { overflow: hidden; }
+    .screen-reader { display: block; left: -9999px; position: absolute; top: -9999px; }
+    .row:after, .clearfix:after {
+        content: "."; 
+        display: block; 
+        height: 0; 
+        clear: both; 
+        visibility: hidden;
+    }
+    .amp { font-family: Baskerville, "Goudy Old Style", "Palatino", "Book Antiqua", serif; font-size: 1.1em; font-style: italic; font-weight: normal; }
+/* @end */
+
+/* @group =base */
+    body {
+      background: #ffffff url(../images/HappySkies.png) center 30%;
+      color: #000000;
+      font: 24px/36px Helvetica, Arial, Sans-Serif;
+      overflow: hidden;
+    }
+
+	/* @group -headers */
+	h1, h2, h3, h4, h5, h6 { font-weight: normal; }
+	h1 { font-size: 18px; line-height: 18px; }
+	h2, h3, h4, h5 { font-family: times, ariel, verdana, helvetica; }
+	/* @end */
+
+	/* @group -links */
+	a, a:link { text-decoration: underline; color: inherit }
+	a:visited { color: inherit }
+	a:hover { text-decoration: none; color: inherit}
+	a:active {}
+	/* @end */
+
+	/* @group -basic text */
+	p, ol, ul, table { 
+        margin: 0;
+        font-size: 2em; 
+        line-height: 1.25em;
+    }
+    ol, ul {
+        margin: 0 0 0 1em; 
+        font-size: 2em; 
+        line-height: 1.25em;
+    }
+	ul { list-style: square; }
+	li { border-bottom: 1px solid rgba(147,204,198,0.2); }
+	li:first-child { padding-top: 0; }
+	li:last-child { border-bottom: none; padding-bottom: 0; }
+	/* @end */
+
+	/* @group -header/footer */
+	#header, #footer {
+	  background: rgba(147,204,198,0.5);
+	  color: #888;
+	  font-size: 14px; 
+	  line-height: 14px;
+	  position: fixed;
+	  width: 100%;
+	  z-index: 10;
+      height: 2em;
+	}
+	#header { top: 0; }
+	#footer { bottom: 0; text-align: right; }
+	#footer .container { padding: .5em 1em 0 0em; }
+	#header .container { padding: .25em 0 0 1em; }
+	/* @end */	
+	
+	/* @group -form elements */
+	button { 
+		cursor: pointer; 
+		width: auto;
+		overflow: visible;
+	}
+	label { font-weight: bold; }
+	/* @end */		
+
+/* @end */
+
+/* @group =pages */
+
+     /* @group -slides */
+      #slides { 
+        top: 10px; 
+        position: relative;
+        width: 100%;
+      }
+      .js .slide { 
+        position: absolute; 
+        width: 100%;
+        margin: 0;
+      }
+      .slide { 
+      }
+      .slide-frame {
+        background: rgba(255,255,255,0.5);
+        padding: 2em 5em 2em 3em;
+        margin: 2em 1em 2em 1em;
+      }
+      .slide-inner {
+      }
+      .slide.title { 
+        margin-top: 2em;
+      }
+      .slide h2 { 
+        color: #335533; 
+        font-size: 2.5em; 
+        font-weight: bold;
+        line-height: 60px; 
+        margin: 0 0 .5em 0;
+        width: 100%;
+      }
+
+      .slide .bitfield td {
+        border: solid 1px black;
+        font-size: .6em;
+        padding: 0 .5em 0 .5em;
+        line-height: 1em;
+        height: 1em;
+      }
+
+      .slide table.bitfield {
+        margin: .1em 0 .1em 0;
+      }
+
+      .slide .bitfield tr {
+      }
+
+      .slide .bitfield .command {
+        background: rgba(0,255,0,0.5);
+      }
+
+      .slide .bitfield .data {
+        background: rgba(0,0,255,0.5);
+      }
+
+      .slide .bitfield .cdflag {
+        background: rgba(0,255,255,0.5);
+      }
+
+      .slide .bitfield .hex {
+        background: rgba(255,255,255,1);
+      }
+
+     /* @end */
+
+    /* @group -pagers */
+      .nav-pager, .nav-prev-next { 
+            font-size: 14px; 
+            list-style: none; 
+            margin: 0; 
+            height: 2em; 
+            overflow: hidden; 
+            position: fixed; 
+            z-index: 100; 
+        }
+      .nav-pager li, .nav-prev-next li { border: none; float: left; padding: 0; }
+      .nav-pager a, .nav-prev-next a { display: block; line-height: 12px; }
+      .nav-pager { bottom: 0; left: 20px; }
+      .nav-pager li { margin-right: 10px; }
+      .nav-pager a, .nav-prev-next a { 
+            color: rgba(26,31,30,0.5); 
+            padding: .5em;
+            text-decoration: none; 
+      }
+      .nav-pager .current a, .nav-prev-next a:hover { background: #6cbdb5; color: #fff; }
+      .nav-prev-next { right: 20px; top: 0; }
+      .nav-prev-next li { margin-left: 10px; }
+    /* @end */
+
+/* @end */
+
+img.source-image {
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
