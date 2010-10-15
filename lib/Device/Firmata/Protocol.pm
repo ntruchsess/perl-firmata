@@ -1,4 +1,4 @@
-package Firmata::Arduino::Tied::Protocol;
+package Device::Firmata::Protocol;
 
 use strict;
 use vars qw/ $MIDI_DATA_SIZES /;
@@ -11,9 +11,9 @@ use constant {
     MIDI_END_SYSEX    => 0xf7,
 };
 
-use Firmata::Arduino::Tied::Constants qw/ :all /;
-use Firmata::Arduino::Tied::Base
-    ISA => 'Firmata::Arduino::Tied::Base',
+use Device::Firmata::Constants qw/ :all /;
+use Device::Firmata::Base
+    ISA => 'Device::Firmata::Base',
     FIRMATA_ATTRIBS => {
         buffer           => [],
         parse_status     => MIDI_PARSE_NORMAL,

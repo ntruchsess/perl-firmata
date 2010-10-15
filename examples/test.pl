@@ -1,15 +1,17 @@
 #!/usr/bin/perl
 
 use strict;
+use lib '../lib';
 use Data::Dumper;
-use Firmata::Arduino::Tied::Constants qw/ :all /;
-use Firmata::Arduino::Tied::Protocol;
-use Firmata::Arduino::Tied;
+use Device::Firmata::Constants qw/ :all /;
+use Device::Firmata;
 $|++;
 
-my $device = Firmata::Arduino::Tied->open('/dev/ttyUSB0');
+my $device = Device::Firmata->open('/dev/ttyUSB0') or die "Could not connect to Firmata Server";
 
 $device->probe;
+
+die Dumper $device;
 
 #$device->pin_mode(13=>PIN_OUTPUT);
 
@@ -28,7 +30,7 @@ $device->pin_mode(1=>PIN_ANALOG);
 
 my $iteration = 0;
 
-#$Firmata::Arduino::Tied::DEBUG = 1;
+#$Device::Firmata::DEBUG = 1;
 
 while (1) {
     $device->poll;

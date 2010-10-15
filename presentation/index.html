@@ -114,19 +114,8 @@ void loop() {
           <h2>In pragmatic terms...</h2>
           <p style="min-height:8em">
             <img src="images/bear-work.png" style="float:right;width:9em" title="Pedobear learns to use an Arduino" />
-            System to control Arduino IO pins from a computer.<br/>
+            System to control Arduino I/O pins from a computer.<br/>
             <br/>
-          </p>
-        </div>
-
-        <div class="slide">
-          <h2>How does it work?</h2>
-          <p>
-            <ul>
-              <li>Computer runs client code</li>
-              <li>Serial communication</li>
-              <li>Arduino runs host code</li>
-            </ul>
           </p>
         </div>
 
@@ -140,7 +129,18 @@ void loop() {
         </div>
 
         <div class="slide">
-          <h2>Communication Protocol</h2>
+          <h2>How does it work?</h2>
+          <p>
+            <ul>
+              <li>Arduino runs host code</li>
+              <li>Computer runs client code</li>
+              <li>Serial communication</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Serial Communication Protocol</h2>
           <p>
 
             <object style="float:right;width:10em;height:7em;margin:.25em 0 0 1em">
@@ -156,7 +156,7 @@ void loop() {
 
             <ul style="min-height:8em">
               <li>MIDI usually used for electronic instruments</li>
-              <li>Redefine MIDI messages for IO</li>
+              <li>Redefine MIDI messages for I/O</li>
             </ul>
           </p>
         </div>
@@ -255,9 +255,8 @@ void loop() {
           <p>
             Work in progress: <a href="http://github.com/amimoto/perl-firmata" target="_blank">Device::Firmata</a><br/><br/>
             <ul>
-              <li>Simple interface</li>
+              <li>Spartan interface</li>
               <li>Use Device::SerialPort</li>
-              <li>Use simple objects</li>
             </ul>
           </p>
         </div>
@@ -266,18 +265,16 @@ void loop() {
           <h2>Example: Blink</h2>
           <p>
             <pre>
-#!/usr/bin/perl
-
-use strict;
 use Device::Firmata;
+use Device::Firmata::Constants qw/:all/;
 
-my $device = Device::Firmata->open('/dev/ttyUSB0');
+my $device = Device::Firmata-&gt;open('/dev/ttyUSB0');
 
-$device->pin_mode(13=>PIN_OUTPUT);
+$device-&gt;pin_mode(13=&gt;PIN_OUTPUT);
 while (1) {
-    $device->digital_write(13=>1);
+    $device-&gt;digital_write(13=&gt;1);
     sleep(1);
-    $device->digital_write(13=>0);
+    $device-&gt;digital_write(13=&gt;0);
     sleep(1);
 }</pre>
           </p>
@@ -298,9 +295,8 @@ while (1) {
           <h2>Practical Uses?</h2>
           <p>
             <ul>
-              <li>Education/Study</li>
               <li>I/O for desktop applications (Very Poor Man's <a href="http://labjack.com/" target="_blank">Labjack</a>)</li>
-              <li>Exploring new hardware interfaces</li>
+              <li>Education/Study</li>
             </ul>
           </p>
         </div>
@@ -355,9 +351,8 @@ while (1) {
             </ul>
             <p><b>SO:</b></p>
             <ul>
-              <li>Use Arduino drive IO pins</li>
-              <li>Write Perl code to implement signals</li>
               <li>Use Firmata to link Arduino and Perl</li>
+              <li>Write signal implementation in Perl</li>
             </ul>
           </p>
         </div>
@@ -456,6 +451,20 @@ select undef, undef, undef, $PULSE_LEN;
               <li>Arduino = Cool Prototyping Platform</li>
               <li>Firmata = Cool Protocol to control Arduino</li>
               <li>Perl = RAD tool to script interactions with the real world</li>
+            </ul>
+          </p>
+        </div>
+
+        <div class="slide">
+          <h2>Presentation Tool</h2>
+          <p>
+            Used jQuery plugin by Trevor Davis:
+            <ul>
+              <li>
+                <a href="http://www.viget.com/inspire/jquery-presentation-plugin/">
+                  jquery-presentation
+                </a>
+              </li>
             </ul>
           </p>
         </div>

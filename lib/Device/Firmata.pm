@@ -1,11 +1,10 @@
-package Firmata::Arduino::Tied;
+package Device::Firmata;
 
 use strict;
 use vars qw/ $DEBUG /;
-use Firmata::Arduino::Tied::Constants;
-use Firmata::Arduino::Tied::Device;
-use Firmata::Arduino::Tied::Base
-    ISA => 'Firmata::Arduino::Tied::Base',
+use Device::Firmata::Constants;
+use Device::Firmata::Base
+    ISA => 'Device::Firmata::Base',
     FIRMATA_ATTRIBS => {
     };
 
@@ -17,9 +16,13 @@ sub open {
 #
     my ( $self, $serial_port, $opts ) = @_;
 
-# We're going to try and create the device connection
-# first...
-    my $device = Firmata::Arduino::Tied::Device->open($serial_port,$opts);
+# We're going to try and create the device connection first...
+    my $package = "Device::Firmata::Platform";
+    eval "require $package";
+    my $device = $package->open($serial_port,$opts);
+
+# Figure out what platform we're running on
+    $device->probe;
 
     return $device;
 }

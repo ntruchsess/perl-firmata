@@ -1,9 +1,9 @@
-package Firmata::Arduino::Tied::IO;
+package Device::Firmata::IO;
 
 use strict;
 use vars qw/ $SERIAL_CLASS /;
-use Firmata::Arduino::Tied::Base
-    ISA => 'Firmata::Arduino::Tied::Base',
+use Device::Firmata::Base
+    ISA => 'Device::Firmata::Base',
     FIRMATA_ATTRIBS => {
         handle   => undef,
         baudrate => 57600,
@@ -19,7 +19,8 @@ sub open {
 
     my $self = ref $pkg ? $pkg : $pkg->new($opts);
 
-    $self->{handle} = $SERIAL_CLASS->new( $serial_port, 1, 0 ) or return;
+    my $serial_obj = $SERIAL_CLASS->new( $serial_port, 1, 0 ) or return;
+    $self->{handle} = $serial_obj;
     $self->{handle}->baudrate($self->{baudrate});
     $self->{handle}->databits(8);
     $self->{handle}->stopbits(1);
@@ -32,7 +33,7 @@ sub data_write {
 # Dump a bunch of data into the comm port
 #
     my ( $self, $buf ) = @_;
-    $Firmata::Arduino::Tied::DEBUG and print ">".join(",",map{sprintf"%02x",ord$_}split//,$buf)."\n";
+    $Device::Firmata::DEBUG and print ">".join(",",map{sprintf"%02x",ord$_}split//,$buf)."\n";
     return $self->{handle}->write( $buf );
 }
 
@@ -43,7 +44,7 @@ sub data_read {
 #
     my ( $self, $bytes ) = @_;
     my ( $count, $string ) = $self->{handle}->read($bytes);
-    if ( $Firmata::Arduino::Tied::DEBUG and $string ) {
+    if ( $Device::Firmata::DEBUG and $string ) {
         print "<".join(",",map{sprintf"%02x",ord$_}split//,$string)."\n";
     }
     return $string;

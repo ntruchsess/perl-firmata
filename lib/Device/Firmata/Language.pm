@@ -1,4 +1,4 @@
-package Firmata::Arduino::Tied::Language;
+package Device::Firmata::Language;
 # ==================================================================
 
 use strict;
@@ -7,8 +7,8 @@ use vars qw/
         $FIRMATA_LOCALE_PATH
         $FIRMATA_LOCALE_MESSAGES 
     /;
-use Firmata::Arduino::Tied::Base
-    ISA => 'Firmata::Arduino::Tied::Base',
+use Device::Firmata::Base
+    ISA => 'Device::Firmata::Base',
     FIRMATA_ATTRIBS => {
         messages => {},
     };

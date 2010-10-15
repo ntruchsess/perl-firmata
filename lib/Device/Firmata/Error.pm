@@ -1,4 +1,4 @@
-package Firmata::Arduino::Tied::Error;
+package Device::Firmata::Error;
 # ==================================================================
 
 use strict;
@@ -10,7 +10,7 @@ use vars qw/
             $FIRMATA_ERROR_DEFAULT 
             @ERROR_STACK
         /;
-use Firmata::Arduino::Tied::Base;
+use Device::Firmata::Base;
 
 @ISA = 'Exporter';
 
@@ -32,7 +32,7 @@ sub error {
 #   $err->error( [numerical error level], ErrorMessage, ... parameters ... );
 #   
 #   ErrorMessage can be in the format "KEY" that will be referenced by 
-#   Firmata::Arduino::Tied::Base->language or "KEY:Message" where if ->language does not map
+#   Device::Firmata::Base->language or "KEY:Message" where if ->language does not map
 #   to anything, the error will default to Message 
 #
     my $self        = shift;
@@ -45,15 +45,15 @@ sub error {
     else {
         $error_code = $message;
     };
-    my $text = Firmata::Arduino::Tied::Base->language($message,@_);
+    my $text = Device::Firmata::Base->language($message,@_);
     push @ERROR_STACK, [ $text, $error_level, $text ];
 
     if ( $error_level < 1 ) {
         my $i = 1;
         my ( $pkg, $fn, $line );
 
-# Proceed up the call stack until we find out where the error likely occured (ie. Not in Firmata::Arduino::Tied::Base)
-        do { ( $pkg, $fn, $line ) = caller($i); $i++; } while ( $pkg eq 'Firmata::Arduino::Tied::Base' );
+# Proceed up the call stack until we find out where the error likely occured (ie. Not in Device::Firmata::Base)
+        do { ( $pkg, $fn, $line ) = caller($i); $i++; } while ( $pkg eq 'Device::Firmata::Base' );
 
         $error_level < 0 ?  die "\@$fn:$pkg:$line". ' : ' .  $text . "\n"
                          : warn "\@$fn:$pkg:$line". ' : ' .  $text . "\n";

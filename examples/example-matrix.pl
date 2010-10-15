@@ -1,11 +1,12 @@
 #!/usr/bin/perl
 
 use strict;
+use lib '../lib';
 use vars qw/ $PULSE_LEN $PIN_LOOKUP /;
 use Data::Dumper;
-use Firmata::Arduino::Tied::Constants qw/ :all /;
-use Firmata::Arduino::Tied::Protocol;
-use Firmata::Arduino::Tied;
+use Device::Firmata::Constants qw/ :all /;
+use Device::Firmata::Protocol;
+use Device::Firmata;
 
 use constant ($PIN_LOOKUP={
     CS1  => 5,
@@ -18,12 +19,12 @@ use constant ($PIN_LOOKUP={
     DATA => 4,
 });
 
-#$Firmata::Arduino::Tied::DEBUG = 1;
+#$Device::Firmata::DEBUG = 1;
 $PULSE_LEN = 0.001;
 
 $|++;
 
-my $device = Firmata::Arduino::Tied->open('/dev/ttyUSB0');
+my $device = Device::Firmata->open('/dev/ttyUSB0');
 
 # Pin connection table
 

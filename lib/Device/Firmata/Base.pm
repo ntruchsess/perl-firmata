@@ -1,4 +1,4 @@
-package Firmata::Arduino::Tied::Base;
+package Device::Firmata::Base;
 
 use strict 'vars', 'subs';
 use vars qw/ 
@@ -24,7 +24,7 @@ $FIRMATA_LOCALE = 'en';
 $FIRMATA_LOCALE_PATH = '.';
 
 $FIRMATA_DEBUG_LEVEL = 0; 
-$FIRMATA_ERROR_CLASS = 'Firmata::Arduino::Tied::Error';
+$FIRMATA_ERROR_CLASS = 'Device::Firmata::Error';
 
 sub import {
 # --------------------------------------------------
@@ -210,8 +210,8 @@ sub locale_path {
 sub language {
 # --------------------------------------------------
     my $self = shift;
-    require Firmata::Arduino::Tied::Language;
-    return Firmata::Arduino::Tied::Language->language(@_);
+    require Device::Firmata::Language;
+    return Device::Firmata::Language->language(@_);
 }
 
 sub error {
@@ -239,8 +239,8 @@ sub init_error {
 #
     $FIRMATA_ERROR and return $FIRMATA_ERROR;
 
-    if ( $FIRMATA_ERROR_CLASS eq 'Firmata::Arduino::Tied::Error' ) {
-        require Firmata::Arduino::Tied::Error;
+    if ( $FIRMATA_ERROR_CLASS eq 'Device::Firmata::Error' ) {
+        require Device::Firmata::Error;
         return $FIRMATA_ERROR = $FIRMATA_ERROR_CLASS;
     }
 
@@ -286,7 +286,7 @@ sub AUTOLOAD {
     my $self = shift;
     my ($attrib) = $AUTOLOAD =~ /::([^:]+)$/;
 
-    if ( $self and UNIVERSAL::isa( $self, 'Firmata::Arduino::Tied::Base' ) ) {
+    if ( $self and UNIVERSAL::isa( $self, 'Device::Firmata::Base' ) ) {
         $self->error( FIRMATA__unhandled => $attrib, join( " ", caller() ) );
         die $self->error;
     }

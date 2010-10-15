@@ -1,12 +1,12 @@
-package Firmata::Arduino::Tied::Device;
+package Device::Firmata::Platform;
 
 use strict;
 use Time::HiRes qw/time/;
-use Firmata::Arduino::Tied::Constants qw/ :all /;
-use Firmata::Arduino::Tied::IO;
-use Firmata::Arduino::Tied::Protocol;
-use Firmata::Arduino::Tied::Base
-    ISA => 'Firmata::Arduino::Tied::Base',
+use Device::Firmata::Constants qw/ :all /;
+use Device::Firmata::IO;
+use Device::Firmata::Protocol;
+use Device::Firmata::Base
+    ISA => 'Device::Firmata::Base',
     FIRMATA_ATTRIBS => {
 
 # Object handlers
@@ -36,8 +36,8 @@ sub open {
 
     my $self = ref $pkg ? $pkg : $pkg->new($opts);
 
-    $self->{io}       = Firmata::Arduino::Tied::IO->open($port);
-    $self->{protocol} = Firmata::Arduino::Tied::Protocol->new;
+    $self->{io}       = Device::Firmata::IO->open($port,$opts) or return;
+    $self->{protocol} = Device::Firmata::Protocol->new($opts)  or return;
 
     return $self;
 }
@@ -101,7 +101,7 @@ sub messages_handle {
 
         };
  
-        $Firmata::Arduino::Tied::DEBUG and print "    < $command\n";
+        $Device::Firmata::DEBUG and print "    < $command\n";
     }
 
 }

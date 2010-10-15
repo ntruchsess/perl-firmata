@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
+use lib '../lib';
 use Data::Dumper;
 use Device::Firmata::Constants qw/ :all /;
 use Device::Firmata;
@@ -15,6 +16,6 @@ my $iteration = 0;
 while (1) {
     my $strobe_state = $iteration++%2;
     $device->digital_write($led_pin=>$strobe_state);
-    select undef,undef,undef,0.1;
+    select undef,undef,undef,1;
 }
 

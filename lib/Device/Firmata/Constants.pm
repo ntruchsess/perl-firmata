@@ -1,4 +1,4 @@
-package Firmata::Arduino::Tied::Constants;
+package Device::Firmata::Constants;
 
 use strict;
 use Exporter;

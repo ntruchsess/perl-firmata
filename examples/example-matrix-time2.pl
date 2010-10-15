@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
+use lib '../lib';
 use vars qw/ $PULSE_LEN $PIN_LOOKUP $CHARMAP /;
 use Data::Dumper;
 use Device::Firmata::Constants qw/ :all /;
