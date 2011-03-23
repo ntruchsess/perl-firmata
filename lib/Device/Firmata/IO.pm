@@ -1,6 +1,14 @@
 package Device::Firmata::IO;
 
+=head1 NAME
+
+Device::Firmata::IO - implement the low level serial IO
+
+=cut
+
 use strict;
+use warnings;
+
 use vars qw/ $SERIAL_CLASS /;
 use Device::Firmata::Base
     ISA => 'Device::Firmata::Base',
@@ -12,6 +20,11 @@ use Device::Firmata::Base
 $SERIAL_CLASS = $^O eq 'MSWin32' ? 'Win32::Serialport' 
                                  : 'Device::SerialPort';
 eval "require $SERIAL_CLASS";
+
+
+=head2 open
+
+=cut
 
 sub open {
 # --------------------------------------------------
@@ -28,20 +41,30 @@ sub open {
     return $self;
 }
 
+
+=head2 data_write
+
+Dump a bunch of data into the comm port
+
+=cut
+
 sub data_write {
 # --------------------------------------------------
-# Dump a bunch of data into the comm port
-#
     my ( $self, $buf ) = @_;
     $Device::Firmata::DEBUG and print ">".join(",",map{sprintf"%02x",ord$_}split//,$buf)."\n";
     return $self->{handle}->write( $buf );
 }
 
+
+=head2 data_read
+
+We fetch up to $bytes from the comm port
+This function is non-blocking
+
+=cut
+
 sub data_read {
 # --------------------------------------------------
-# We fetch up to $bytes from the comm port
-# This function is non-blocking
-#
     my ( $self, $bytes ) = @_;
     my ( $count, $string ) = $self->{handle}->read($bytes);
     if ( $Device::Firmata::DEBUG and $string ) {

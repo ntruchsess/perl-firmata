@@ -1,5 +1,11 @@
 package Device::Firmata::Platform;
 
+=head1 NAME
+
+Device::Firmata::Platform - platform specifics
+
+=cut
+
 use strict;
 use Time::HiRes qw/time/;
 use Device::Firmata::Constants qw/ :all /;
@@ -27,11 +33,16 @@ use Device::Firmata::Base
         metadata         => {},
     };
 
+
+=head2 open
+
+Connect to the IO port and do some basic operations
+to find out how to connect to the device
+
+=cut
+
 sub open {
 # --------------------------------------------------
-# Connect to the IO port and do some basic operations
-# to find out how to connect to the device
-#
     my ( $pkg, $port, $opts ) = @_;
 
     my $self = ref $pkg ? $pkg : $pkg->new($opts);
@@ -42,12 +53,17 @@ sub open {
     return $self;
 }
 
+
+=head2 messages_handle
+
+Receive identified message packets and convert them
+into their appropriate structures and parse
+them as required
+
+=cut
+
 sub messages_handle {
 # --------------------------------------------------
-# Receive identified message packets and convert them
-# into their appropriate structures and parse
-# them as required
-#
     my ( $self, $messages ) = @_;
 
     return unless $messages;
@@ -106,12 +122,17 @@ sub messages_handle {
 
 }
 
+
+=head2 sysex_handle
+
+Receive identified sysex packets and convert them
+into their appropriate structures and parse
+them as required
+
+=cut
+
 sub sysex_handle {
 # --------------------------------------------------
-# Receive identified sysex packets and convert them
-# into their appropriate structures and parse
-# them as required
-#
     my ( $self, $sysex_message ) = @_;
 
     my $data = $sysex_message->{data};
@@ -123,14 +144,19 @@ sub sysex_handle {
     };
 }
 
+
+=head2 probe
+
+Request the version of the protocol that the
+target device is using. Sometimes, we'll have to
+wait a couple of seconds for the response so we'll
+try for 2 seconds and rapidly fire requests if 
+we don't get a response quickly enough ;)
+
+=cut
+
 sub probe {
 # --------------------------------------------------
-# Request the version of the protocol that the
-# target device is using. Sometimes, we'll have to
-# wait a couple of seconds for the response so we'll
-# try for 2 seconds and rapidly fire requests if 
-# we don't get a response quickly enough ;)
-#
     my ( $self ) = @_;
 
     my $proto  = $self->{protocol};
@@ -167,11 +193,16 @@ sub probe {
     }
 }
 
+
+=head2 pin_mode
+
+Similar to the pinMode function on the 
+arduino
+
+=cut
+
 sub pin_mode {
 # --------------------------------------------------
-# Similar to the pinMode function on the 
-# arduino
-# 
     my ( $self, $pin, $mode ) = @_;
 
     if ( $mode == PIN_INPUT or $mode == PIN_OUTPUT ) {
@@ -179,7 +210,7 @@ sub pin_mode {
         my $mode_packet = $self->{protocol}->message_prepare( REPORT_DIGITAL => $port_number, 1 );
         $self->{io}->data_write($mode_packet);
 
-        my $mode_packet = $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
+        $mode_packet = $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
         return $self->{io}->data_write($mode_packet);
     }
 
@@ -193,17 +224,22 @@ sub pin_mode {
         my $mode_packet = $self->{protocol}->message_prepare( REPORT_ANALOG => $port_number, 1 );
         $self->{io}->data_write($mode_packet);
 
-        my $mode_packet = $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
+        $mode_packet = $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
         return $self->{io}->data_write($mode_packet);
     }
 
 }
 
+
+=head2 digital_write
+
+Analogous to the digitalWrite function on the 
+arduino
+
+=cut
+
 sub digital_write {
 # --------------------------------------------------
-# Analogous to the digitalWrite function on the 
-# arduino
-#
     my ( $self, $pin, $state ) = @_;
     my $port_number = $pin >> 3;
 
@@ -223,11 +259,16 @@ sub digital_write {
     return $self->{io}->data_write($mode_packet);
 }
 
+
+=head2 digital_read
+
+Analogous to the digitalRead function on the 
+arduino
+
+=cut
+
 sub digital_read {
 # --------------------------------------------------
-# Analogous to the digitalRead function on the 
-# arduino
-# 
     my ( $self, $pin ) = @_;
     my $port_number = $pin >> 3;
     my $pin_offset  = $pin % 8;
@@ -236,13 +277,24 @@ sub digital_read {
     return( $port_state & $pin_mask ? 1 : 0 );
 }
 
+
+=head2 analog_read
+
+Fetches the analog value of a pin 
+
+=cut
+
 sub analog_read {
 # --------------------------------------------------
-# Fetches the analog value of a pin 
 #
     my ( $self, $pin ) = @_;
     return $self->{analog_pins}[$pin];
 }
+
+
+=head2 analog_write
+
+=cut
 
 sub analog_write {
 # --------------------------------------------------
@@ -256,14 +308,25 @@ sub analog_write {
     my $mode_packet = $self->{protocol}->message_prepare( ANALOG_MESSAGE => $pin, $byte_0, $byte_1 );
     return $self->{io}->data_write($mode_packet);
 }
+
+=head2 pwm_write
+
+pmw_write is an alias for analog_write
+
+=cut
 *pwm_write = *analog_write;
+
+
+=head2 poll
+
+Call this function every once in a while to
+check up on the status of the comm port, receive
+and process data from the arduino
+
+=cut
 
 sub poll {
 # --------------------------------------------------
-# Call this function every once in a while to
-# check up on the status of the comm port, receive
-# and process data from the arduino
-#
     my $self = shift;
     my $buf = $self->{io}->data_read(100) or return;
     my $messages = $self->{protocol}->message_data_receive($buf);

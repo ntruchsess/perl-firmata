@@ -1,6 +1,13 @@
 package Device::Firmata::Protocol;
 
+=head1 NAME 
+
+Device::Firmata::Protocol - details of the actual firmata protocol
+
+=cut
+
 use strict;
+use warnings;
 use vars qw/ $MIDI_DATA_SIZES /;
 
 use constant {
@@ -35,55 +42,64 @@ $MIDI_DATA_SIZES = {
     0xF9 => 2,
 };
 
-# Because we're dealing with a permutation of the
-# MIDI protocol, certain commands are one bytes,
-# others 2 or even 3. We do this part to figure out
-# how many bytes we're actually looking at
+=head1 DESCRIPTION
 
-# One of the first things to know is that that while
-# MIDI is packet based, the bytes have specialized
-# construction (where the top-most bit has been
-# reserved to differentiate if it's a command or a
-# data bit)
+Because we're dealing with a permutation of the
+MIDI protocol, certain commands are one bytes,
+others 2 or even 3. We do this part to figure out
+how many bytes we're actually looking at
 
-# So on any byte being transferred in a MIDI stream, it
-# will look like the following
+One of the first things to know is that that while
+MIDI is packet based, the bytes have specialized
+construction (where the top-most bit has been
+reserved to differentiate if it's a command or a
+data bit)
 
-# BIT# | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-# DATA | X | ? | ? | ? | ? | ? | ? | ? |
+So on any byte being transferred in a MIDI stream, it
+will look like the following
 
-# If X is a "1" this byte is considered a command byte
-# If X is a "0" this byte is considered a data bte
+ BIT# | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+ DATA | X | ? | ? | ? | ? | ? | ? | ? |
 
-# We figure out how many bytes a packet is by looking at the
-# command byte and of that byte, only the high nybble.
-# This nybble tells us the requisite information via a lookup 
-# table... 
+If X is a "1" this byte is considered a command byte
+If X is a "0" this byte is considered a data bte
 
-# See: http://www.midi.org/techspecs/midimessages.php
-# And
-# http://www.ccarh.org/courses/253/handout/midiprotocol/
-# For more information
+We figure out how many bytes a packet is by looking at the
+command byte and of that byte, only the high nybble.
+This nybble tells us the requisite information via a lookup 
+table... 
 
-# Basically, however:
-# 
-# command
-# nibble  bytes   
-# 8       2
-# 9       2
-# A       2
-# B       2
-# C       1
-# D       1
-# E       2
-# F       0 or variable
+See: http://www.midi.org/techspecs/midimessages.php
+And
+http://www.ccarh.org/courses/253/handout/midiprotocol/
+For more information
+
+Basically, however:
+
+command
+nibble  bytes   
+8       2
+9       2
+A       2
+B       2
+C       1
+D       1
+E       2
+F       0 or variable
+
+=cut
+
+
+=head2 message_data_receive
+
+Receive a string of data. Normally, only one byte 
+is passed due to the code but you can also pass as
+many bytes in a string as you'd like
+
+=cut
 
 sub message_data_receive {
 # --------------------------------------------------
-# Receive a string of data. Normally, only one byte 
-# is passed due to the code but you can also pass as
-# many bytes in a string as you'd like
-#
     my ( $self, $data ) = @_;
 
     defined $data and length $data or return;
@@ -131,7 +147,7 @@ sub message_data_receive {
                 last;
             }
             my @data = splice @$buffer, 0, $bytes;
-            my $command = shift @data;
+            $command = shift @data;
             push @packets, {
                 command => $command,
                 command_str => $protocol_lookup->{$command}||$protocol_lookup->{$command&0xf0}||'UNKNOWN',
@@ -172,11 +188,16 @@ sub message_data_receive {
     return \@packets;
 }
 
+
+=head2 message_packet_parse
+
+Receive a SINGLE full message packet and convert the 
+binary string into an easier-to-use hash
+
+=cut
+
 sub message_packet_parse {
 # --------------------------------------------------
-# Receive a SINGLE full message packet and convert the 
-# binary string into an easier-to-use hash
-#
     my ( $self, $packet ) = @_;
 
 # Standardize input: Make sure that $packet is an array ref
@@ -274,11 +295,16 @@ sub message_packet_parse {
 
 }
 
+
+=head2 sysex_parse
+
+Takes the sysex data buffer and parses it into 
+something useful
+
+=cut
+
 sub sysex_parse {
 # --------------------------------------------------
-# Takes the sysex data buffer and parses it into 
-# something useful
-#
     my ( $self, $sysex_data ) = @_;
 
     my $protocol_version  = $self->{protocol_version};
@@ -302,11 +328,16 @@ sub sysex_parse {
     return;
 }
 
+
+=head2 message_prepare
+
+Using the midi protocol, create a binary packet
+that can be transmitted to the serial output
+
+=cut
+
 sub message_prepare {
 # --------------------------------------------------
-# Using the midi protocol, create a binary packet
-# that can be transmitted to the serial output
-#
     my ( $self, $command_name, $channel, @data ) = @_;
 
     my $protocol_version  = $self->{protocol_version};
@@ -318,10 +349,15 @@ sub message_prepare {
     return $packet;
 }
 
+
+=head2 packet_query_version
+
+Craft a firmware version query packet to be sent
+
+=cut
+
 sub packet_query_version {
 # --------------------------------------------------
-# Craft a firmware version query packet to be sent
-#
     my $self = shift;
 
     my $protocol_version = $self->{protocol_version};
@@ -331,10 +367,15 @@ sub packet_query_version {
     return $packet;
 }
 
+
+=head2 packet_query_firmware
+
+Craft a firmware variant query packet to be sent
+
+=cut
+
 sub packet_query_firmware {
 # --------------------------------------------------
-# Craft a firmware variant query packet to be sent
-#
     my $self = shift;
 
     my $protocol_version = $self->{protocol_version};

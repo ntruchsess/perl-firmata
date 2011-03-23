@@ -1,5 +1,11 @@
 package Device::Firmata::Constants;
 
+=head1 NAME
+
+Device::Firmata::Constants - constants used in the system
+
+=cut
+
 use strict;
 use Exporter;
 use vars qw/ 
@@ -23,7 +29,7 @@ use constant ($BASE={
     PIN_HIGH   => 1,
 });
 
-$DEVICES => {
+$DEVICES = {
     'arduino_dumilanove' => {},
 };
 
