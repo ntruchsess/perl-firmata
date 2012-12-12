@@ -33,7 +33,7 @@ sub open {
     my $self = ref $pkg ? $pkg : $pkg->new($opts);
 
     my $serial_obj = $SERIAL_CLASS->new( $serial_port, 1, 0 ) or return;
-    $self->{handle} = $serial_obj;
+    $self->attach($serial_obj,$opts);
     $self->{handle}->baudrate($self->{baudrate});
     $self->{handle}->databits(8);
     $self->{handle}->stopbits(1);
@@ -41,6 +41,15 @@ sub open {
     return $self;
 }
 
+sub attach {
+    my ( $pkg, $serial_obj, $opts ) = @_;
+
+    my $self = ref $pkg ? $pkg : $pkg->new($opts);
+
+    $self->{handle} = $serial_obj;
+
+    return $self;
+}
 
 =head2 data_write
 

@@ -40,6 +40,9 @@ $MIDI_DATA_SIZES = {
 # Special for version queries
     0xF4 => 2,
     0xF9 => 2,
+    
+	0x79 => 0,    
+    0x7A => 2
 };
 
 =head1 DESCRIPTION
@@ -312,20 +315,38 @@ sub sysex_parse {
     my $protocol_lookup   = $COMMAND_LOOKUP->{$protocol_version};
 
     my $command = shift @$sysex_data;
+    my $command_str = $protocol_lookup->{$command};
 
-    $command == $protocol_commands->{REPORT_FIRMWARE} and do {
-        my $major_version = shift @$sysex_data;
-        my $minor_version = shift @$sysex_data;
-#        my $firmware      = pack "B*", join "", map { substr(unpack("B*",chr($_)),1,7) } @$sysex_data;
-        my $firmware      = join "", map {chr$_} @$sysex_data;
-        return {
-            command     => $command,
-            command_str => $protocol_lookup->{$command}||'UNKNOWN',
-            data        => [$major_version,$minor_version,$firmware]
-        };
+    my $return_data;
+
+	COMMAND_HANDLER : {
+    	$command == $protocol_commands->{REPORT_FIRMWARE} and do {
+    		$return_data = $self->handle_report_firmware($sysex_data);
+    		last;
+    	};
+    	
+    	$command == $protocol_commands->{CAPABILITY_RESPONSE} and do {
+    		$return_data = $self->handle_capability_response($sysex_data);
+    		last;
+    	};
+
+    	$command == $protocol_commands->{ANALOG_MAPPING_RESPONSE} and do {
+    		$return_data = $self->handle_analog_mapping_response($sysex_data);
+    		last;
+    	};
+
+    	$command == $protocol_commands->{PIN_STATE_RESPONSE} and do {
+    		$return_data = $self->handle_pin_state_response($sysex_data);
+    		last;
+    	};
+    	
+	}
+
+    return {
+    	command => $command,
+    	command_str => $command_str,
+    	data => $return_data
     };
-
-    return;
 }
 
 
@@ -349,6 +370,21 @@ sub message_prepare {
     return $packet;
 }
 
+sub packet_sysex_command {
+	
+	my ($self,$command_name,@data) = @_;
+	
+    my $protocol_version  = $self->{protocol_version};
+    my $protocol_commands = $COMMANDS->{$protocol_version};
+    my $command = $protocol_commands->{$command_name} or return;
+	
+    my $bytes = 3+($MIDI_DATA_SIZES->{$command & 0xf0}||$MIDI_DATA_SIZES->{$command});
+    my $packet = pack "C"x$bytes, $protocol_commands->{START_SYSEX},
+                                  $command,
+                                  @data,
+                                  $protocol_commands->{END_SYSEX};
+    return $packet;
+}
 
 =head2 packet_query_version
 
@@ -357,16 +393,15 @@ Craft a firmware version query packet to be sent
 =cut
 
 sub packet_query_version {
-# --------------------------------------------------
-    my $self = shift;
 
-    my $protocol_version = $self->{protocol_version};
-    my $protocol_commands = $COMMANDS->{$protocol_version};
-    my $packet = pack "C", $protocol_commands->{REPORT_VERSION};
+	my $self = shift;
+	return $self->message_prepare(REPORT_VERSION => 0);
 
-    return $packet;
 }
 
+sub handle_query_version_response {
+	
+}
 
 =head2 packet_query_firmware
 
@@ -375,16 +410,175 @@ Craft a firmware variant query packet to be sent
 =cut
 
 sub packet_query_firmware {
-# --------------------------------------------------
+
     my $self = shift;
 
-    my $protocol_version = $self->{protocol_version};
-    my $protocol_commands = $COMMANDS->{$protocol_version};
-    my $packet = pack "CCC", $protocol_commands->{START_SYSEX},
-                             $protocol_commands->{REPORT_FIRMWARE},
-                             $protocol_commands->{END_SYSEX};
+	return $self->packet_sysex_command(REPORT_FIRMWARE);
+}
 
-    return $packet;
+sub handle_report_firmware {
+
+	my ($self,$sysex_data) = @_;
+	
+    return {
+        major_version => shift @$sysex_data,
+        minor_version => shift @$sysex_data,
+        firmware      => double_7bit_to_string($sysex_data)  
+    };
+}
+
+sub packet_query_capability {
+	
+	my $self = shift;
+	
+	return $self->packet_sysex_command(CAPABILITY_QUERY);
+}
+
+#/* capabilities response
+# * -------------------------------
+# * 0  START_SYSEX (0xF0) (MIDI System Exclusive)
+# * 1  capabilities response (0x6C)
+# * 2  1st mode supported of pin 0
+# * 3  1st mode's resolution of pin 0
+# * 4  2nd mode supported of pin 0
+# * 5  2nd mode's resolution of pin 0
+# ...   additional modes/resolutions, followed by a single 127 to mark the
+#       end of the first pin's modes.  Each pin follows with its mode and
+#       127, until all pins implemented.
+# * N  END_SYSEX (0xF7)
+# */
+
+sub handle_capability_response {
+
+	my ($self,$sysex_data) = @_;
+	
+	my @pins;
+	
+	my $firstbyte = shift @$sysex_data;
+	
+	while (defined $firstbyte) {
+
+		my @pinmodes;
+		while (defined $firstbyte && $firstbyte != 127) {
+			my $pinmode = {
+				mode => $firstbyte,
+				resolution => shift @$sysex_data # /secondbyte
+			};
+			push @pinmodes,$pinmode;
+			$firstbyte = shift @$sysex_data;
+		};
+		push @pins, \@pinmodes;
+		$firstbyte = shift @$sysex_data;		
+	};
+	
+    return {
+    	pins => \@pins
+    };
+	
+}
+
+sub packet_query_analog_mapping {
+	
+	my $self = shift;
+	
+	return $self->packet_sysex_command(ANALOG_MAPPING_QUERY);
+}
+
+#/* analog mapping response
+# * -------------------------------
+# * 0  START_SYSEX (0xF0) (MIDI System Exclusive)
+# * 1  analog mapping response (0x6A)
+# * 2  analog channel corresponding to pin 0, or 127 if pin 0 does not support analog
+# * 3  analog channel corresponding to pin 1, or 127 if pin 1 does not support analog
+# * 4  analog channel corresponding to pin 2, or 127 if pin 2 does not support analog
+# ...   etc, one byte for each pin
+# * N  END_SYSEX (0xF7)
+# */
+ 
+sub handle_analog_mapping_response {
+	
+	my ($self,$sysex_data) = @_;
+	
+	my @pins;
+	
+	my $pin_mapping = shift @$sysex_data;
+	
+	while (defined $pin_mapping) {
+		push @pins, $pin_mapping;
+	}
+	
+    return {
+    	pins => \@pins
+    };
+	
+}
+
+#/* pin state query
+# * -------------------------------
+# * 0  START_SYSEX (0xF0) (MIDI System Exclusive)
+# * 1  pin state query (0x6D)
+# * 2  pin (0 to 127)
+# * 3  END_SYSEX (0xF7) (MIDI End of SysEx - EOX)
+# */
+ 
+sub packet_query_pin_state {
+	
+	my ($self,$pin) = @_;
+	
+	return $self->packet_sysex_command(PIN_STATE_QUERY,$pin);
+}
+
+#/* pin state response
+# * -------------------------------
+# * 0  START_SYSEX (0xF0) (MIDI System Exclusive)
+# * 1  pin state response (0x6E)
+# * 2  pin (0 to 127)
+# * 3  pin mode (the currently configured mode)
+# * 4  pin state, bits 0-6
+# * 5  (optional) pin state, bits 7-13
+# * 6  (optional) pin state, bits 14-20
+# ...  additional optional bytes, as many as needed
+# * N  END_SYSEX (0xF7)
+# */
+
+sub handle_pin_state_response {
+	
+	my ($self,$sysex_data) = @_;
+	
+	my $pin = shift @$sysex_data;
+	my $mode = shift @$sysex_data;
+	my $state = shift @$sysex_data & 0x7f;
+	
+	my $nibble = shift @$sysex_data;
+	for (my $i=1; defined $nibble; $nibble = shift @$sysex_data) {
+		$state += ($nibble & 0x7f) << (7*$i);
+	}
+	
+    return {
+    	pin => $pin,
+    	mode => $mode,
+    	state => $state
+    };
+	
+}
+
+sub packet_sampling_interval {
+
+	my ($self,$interval) = @_;
+
+	return $self->packet_sysex_command(SAMPLING_INTERVAL,$interval & 0x7f,$interval >> 7);
+}
+
+sub double_7bit_to_string($) {
+	my ($data) = @_;
+	my $ret;
+	my @data = @$data if ref $data eq "ARRAY";
+	while (@data) {
+		my $value = shift(@data);
+		$value+=shift(@data)<<7 if @data;
+		$ret.=chr($value);
+	}
+	return $ret;
 }
 
 1;
