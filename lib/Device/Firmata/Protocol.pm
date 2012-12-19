@@ -46,12 +46,14 @@ $MIDI_DATA_SIZES = {
 };
 
 our $ONE_WIRE_COMMANDS = {
-	SEARCH => 0,
-	RESET  => 1,
-	SELECT => 2,
-	SKIP   => 3,
-	WRITE  => 4,
-	READ   => 5,
+	SEARCH           => 0,
+	SKIP_AND_WRITE   => 1,
+	SKIP_AND_READ    => 2,
+	SELECT_AND_WRITE => 3,
+	SELECT_AND_READ  => 4,
+	READ             => 5,
+	CONFIG           => 6,
+	REPORT_CONFIG    => 7,
 };
 
 =head1 DESCRIPTION
@@ -632,83 +634,90 @@ sub packet_servo_config {
 # */
 
 # ONE_WIRE_COMMANDS:
-#	SEARCH => 0,
-#	RESET => 1,
-#	SELECT => 2,
-#	SKIP => 3,
-#	WRITE => 4,
-#	READ => 5,
+#	SEARCH           => 0,
+#	RESET            => 1,
+#	SKIP_AND_WRITE   => 2,
+#	SKIP_AND_READ    => 3,
+#	SELECT_AND_WRITE => 4,
+#	SELECT_AND_READ  => 5,
+#   CONFIG           => 6,
 
 sub packet_onewire_request {
 
-	my ( $self, $pin, $command, $args ) = @_;
+	my ( $self, $pin, $command, @args ) = @_;
 
   COMMAND_HANDLER: {
 
-		$command eq 'READ' and do {
-			my $numbytes = $args;
-			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{READ},
-				$numbytes & 0x7f,
-				( $numbytes << 7 ) & 0x7f
-			);
-		};
-
-		$command eq 'WRITE' and do {
-			my @data = @$args;
+		$command eq 'SELECT_AND_WRITE'
+		  and do {    #PIN,COMMAND,ADDRESS,NUMBYTES,DATA
+			my $device   = shift @args;
+			my $data     = shift @args;
+			my $numbytes = @$data;
 			my @buffer;
-			my $byte = shift @data;
-			while ( defined $byte ) {
-				push @buffer, $byte & 0x7f;
-				push @buffer, ( $byte << 7 ) & 0x7f;
-				$byte = shift @data;
-			}
+			push_onewire_device_as_two_7bit( $device, \@buffer );
+			push_value_as_two_7bit( $numbytes, \@buffer );
+			push_array_as_two_7bit( $data, \@buffer );
 			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{WRITE}, @buffer );
-		};
+				$ONE_WIRE_COMMANDS->{SELECT_AND_WRITE}, @buffer );
+		  };
 
-		$command eq 'SELECT' and do {
-			my $device = $args;
+		$command eq 'SELECT_AND_READ'
+		  and do {    #PIN,COMMAND,ADDRESS,READCOMMAND,NUMBYTES
+			my $device      = shift @args;
+			my $readcommand = shift @args;
+			my $numbytes    = shift @args;
 			my @buffer;
-			my $family = $device->{family};
-			push @buffer, $family & 0x7f;
-			push @buffer, ( $family << 7 ) & 0x7f;
-			for ( my $i = 0 ; $i < 6 ; $i++ ) {
-				my $addressbyte = $device->{identity}[$i];
-				push @buffer, $addressbyte & 0x7f;
-				push @buffer, ( $addressbyte << 7 ) & 0x7f;
-			}
-			my $crc = $device->{crc};
-			push @buffer, $crc & 0x7f;
-			push @buffer, ( $crc << 7 ) & 0x7f;
-
+			push_onewire_device_as_two_7bit( $device, \@buffer );
+			push_value_as_two_7bit( $readcommand, \@buffer );
+			push_value_as_two_7bit( $numbytes,    \@buffer );
 			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{SELECT}, @buffer );
+				$ONE_WIRE_COMMANDS->{SELECT_AND_READ}, @buffer );
+		  };
+
+		$command eq 'SKIP_AND_WRITE' and do {    #PIN,COMMAND,NUMBYTES,DATA
+			my $data     = shift @args;
+			my $numbytes = @$data;
+			my @buffer;
+			push_value_as_two_7bit( $numbytes, \@buffer );
+			push_array_as_two_7bit( $data, \@buffer );
+			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
+				$ONE_WIRE_COMMANDS->{SKIP_AND_WRITE}, @buffer );
 		};
 
-		$command eq 'SKIP' and do {
+		$command eq 'SKIP_AND_READ' and do {   #PIN,COMMAND,READCOMMAND,NUMBYTES
+			my $readcommand = shift @args;
+			my $numbytes    = shift @args;
+			my @buffer;
+			push_value_as_two_7bit( $readcommand, \@buffer );
+			push_value_as_two_7bit( $numbytes,    \@buffer );
 			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{SKIP} );
-		};
-
-		$command eq 'RESET' and do {
-			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{RESET} );
+				$ONE_WIRE_COMMANDS->{SKIP_AND_READ}, @buffer );
 		};
 
 		$command eq 'SEARCH' and do {
 			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
 				$ONE_WIRE_COMMANDS->{SEARCH} );
 		};
-
+		
+		$command eq 'CONFIG' and do {
+			my $power = shift @args;
+			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
+				$ONE_WIRE_COMMANDS->{CONFIG},( defined $power ) ? $power : 1 );
+		};
+		
+		$command eq 'REPORT_CONFIG' and do {
+			my $device = shift @args;
+			my $config = shift @args;
+			my @buffer;
+			push_onewire_device_as_two_7bit( $device, \@buffer );
+			push_value_as_two_7bit ($config->{preReadCommand}, \@buffer);
+			push_value_as_two_7bit ($config->{readDelay}, \@buffer);
+			push_value_as_two_7bit ($config->{readCommand}, \@buffer);
+			push_value_as_two_7bit ($config->{numBytes}, \@buffer);
+			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
+				$ONE_WIRE_COMMANDS->{REPORT_CONFIG}, @buffer);
+		}
 	}
-}
-
-sub packet_onewire_config {
-
-	my ( $self, $pin, $power ) = @_;
-	return $self->packet_sysex_command( ONEWIRE_CONFIG, $pin,
-		( defined $power ) ? $power : 1 );
 }
 
 sub handle_onewire_reply {
@@ -718,75 +727,133 @@ sub handle_onewire_reply {
 	my $pin     = shift @$sysex_data;
 	my $command = shift @$sysex_data;
 
-  COMMAND_HANDLER: {
+	if ( defined $command ) {
+	  COMMAND_HANDLER: {
 
-		$command == $ONE_WIRE_COMMANDS->{READ} and do {
+			$command == $ONE_WIRE_COMMANDS->{READ}
+			  and do {    #PIN,COMMAND,ADDRESS,DATA
 
-			my @data;
+				my $device = shift_onewire_device_from_two_7bit($sysex_data);
+				my @data   = double_7bit_to_array($sysex_data);
 
-			my $byte = shift14bit($sysex_data);
-			while ( defined $byte ) {
-				push @data, $byte;
-				$byte = shift14bit($sysex_data);
-			}
-			return {
-				pin     => $pin,
-				command => 'READ',
-				data    => \@data
-			};
-		};
+				return {
+					pin     => $pin,
+					command => 'READ',
+					device  => $device,
+					data    => \@data
+				};
+			  };
 
-		$command == $ONE_WIRE_COMMANDS->{SEARCH} and do {
+			$command == $ONE_WIRE_COMMANDS->{SEARCH}
+			  and do {    #PIN,COMMAND,ADDRESS...
 
-			my @devices;
+				my @devices;
 
-			my $family = shift14bit($sysex_data);
-			while ( defined $family ) {
-				my @addressbytes;
-				for ( my $i = 0 ; $i < 6 ; $i++ ) {
-					push @addressbytes, shift14bit($sysex_data);
+				my $device = shift_onewire_device_from_two_7bit($sysex_data);
+				while ( defined $device ) {
+					push @devices, $device;
+					$device = shift_onewire_device_from_two_7bit($sysex_data);
 				}
-				my $crc = shift14bit($sysex_data);
-
-				push @devices,
-				  {
-					family   => $family,
-					identity => \@addressbytes,
-					crc      => $crc
-				  };
-				$family = shift14bit($sysex_data);
-			}
-			return {
-				pin     => $pin,
-				command => 'SEARCH',
-				devices => \@devices,
-			};
-		};
+				return {
+					pin     => $pin,
+					command => 'SEARCH',
+					devices => \@devices,
+				};
+			  };
+		}
 	}
-}
-
-sub double_7bit_to_string($) {
-	my ($data) = @_;
-	my $ret;
-	my @data = @$data if ref $data eq "ARRAY";
-	while (@data) {
-		my $value = shift(@data);
-		$value += shift(@data) << 7 if @data;
-		$ret .= chr($value);
-	}
-	return $ret;
 }
 
 sub shift14bit {
 
 	my $data = shift;
 
-	if ( ref $data eq "ARRAY" ) {
-		my $lsb = shift @$data;
-		my $msb = shift @$data;
-		return defined $msb ? ( $msb << 7 ) + ( $lsb & 0x7f ) : $lsb;
+	my $lsb = shift @$data;
+	my $msb = shift @$data;
+	return
+	    defined $lsb
+	  ? defined $msb 
+		  ? ( $msb << 7 ) + ( $lsb & 0x7f ) 
+		  : $lsb
+	  : undef;
+}
+
+sub double_7bit_to_string {
+	my ( $data, $numbytes ) = @_;
+	my $ret;
+	if ( defined $numbytes ) {
+		for ( my $i = 0 ; $i < $numbytes ; $i++ ) {
+			my $value = shift14bit($data);
+			$ret .= chr($value);
+		}
 	}
-	return undef;
+	else {
+		while (@$data) {
+			my $value = shift14bit($data);
+			$ret .= chr($value);
+		}
+	}
+	return $ret;
+}
+
+sub double_7bit_to_array {
+	my ( $data, $numbytes ) = @_;
+	my @ret;
+	if ( defined $numbytes ) {
+		for ( my $i = 0 ; $i < $numbytes ; $i++ ) {
+			push @ret, shift14bit($data);
+		}
+	}
+	else {
+		while (@$data) {
+			my $value = shift14bit($data);
+			push @ret, $value;
+		}
+	}
+	return @ret;
+}
+
+sub shift_onewire_device_from_two_7bit {
+	my $buffer = shift;
+
+	my $family = shift14bit($buffer);
+	if ( defined $family ) {
+		my @addressbytes = double_7bit_to_array( $buffer, 6 );
+		my $crc = shift14bit($buffer);
+		return {
+			family   => $family,
+			identity => \@addressbytes,
+			crc      => $crc
+		};
+	}
+	else {
+		return undef;
+	}
+
+}
+
+sub push_value_as_two_7bit {
+	my ( $value, $buffer ) = @_;
+	push @$buffer, $value & 0x7f;    #LSB
+	push @$buffer, ( $value >> 7 ) & 0x7f;    #MSB
+}
+
+sub push_onewire_device_as_two_7bit {
+	my ( $device, $buffer ) = @_;
+	push_value_as_two_7bit( $device->{family}, $buffer );
+	for ( my $i = 0 ; $i < 6 ; $i++ ) {
+		push_value_as_two_7bit( $device->{identity}[$i], $buffer );
+	}
+	push_value_as_two_7bit( $device->{crc}, $buffer );
+}
+
+sub push_array_as_two_7bit {
+	my ( $data, $buffer ) = @_;
+	my $byte = shift @$data;
+	while ( defined $byte ) {
+		push_value_as_two_7bit( $byte, $buffer );
+		$byte = shift @$data;
+	}
 }
 
 1;

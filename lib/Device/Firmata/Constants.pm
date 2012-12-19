@@ -204,7 +204,6 @@ use constant ( $COMMANDS = {
          RESERVED_COMMAND =>  0x00, # 2nd SysEx data byte is a chip-specific command (AVR, PIC, TI, etc).
           ONEWIRE_REQUEST =>  0x60,
             ONEWIRE_REPLY =>  0x61,
-           ONEWIRE_CONFIG =>  0x62,
      ANALOG_MAPPING_QUERY =>  0x69, # ask for mapping of analog to pin numbers
   ANALOG_MAPPING_RESPONSE =>  0x6A, # reply with mapping info
          CAPABILITY_QUERY =>  0x6B, # ask for supported modes and resolution of all pins

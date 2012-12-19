@@ -282,7 +282,7 @@ sub pin_mode {
     };
     
     $mode == PIN_ONEWIRE and do {
-    	my $mode_packet = $self->{protocol}->packet_onewire_config($pin,$mode);
+    	my $mode_packet = $self->{protocol}->message_prepare ( SET_PIN_MODE => 0, $pin, $mode );
     	return $self->{io}->data_write($mode_packet);
     };
 
@@ -382,7 +382,13 @@ sub sampling_interval {
 
 sub onewire_config {
 	my ($self, $pin, $power) = @_;
-	my $onewire_packet = $self->{protocol}->packet_onewire_config($pin,$power);
+	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'CONFIG',$power);
+	return $self->{io}->data_write($onewire_packet);
+}
+
+sub onewire_report_config {
+	my ($self,$pin,$device,$config) = @_;
+	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'REPORT_CONFIG',$device,$config);
 	return $self->{io}->data_write($onewire_packet);
 }
 
@@ -392,33 +398,27 @@ sub onewire_search {
 	return $self->{io}->data_write($onewire_packet);
 }
 
-sub onewire_reset {
-	my ($self, $pin) = @_;
-	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'RESET');
+sub onewire_select_and_write { #PIN,COMMAND,ADDRESS,DATA
+	my ($self, $pin, $device, $data) = @_;
+	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'SELECT_AND_WRITE',$device,$data); 
 	return $self->{io}->data_write($onewire_packet);
 }
 
-sub onewire_select {
-	my ($self, $pin, $device) = @_;
-	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'SELECT',$device);
+sub onewire_select_and_read { #PIN,COMMAND,ADDRESS,READCOMMAND,NUMBYTES
+	my ($self, $pin, $device, $readcommand, $numbytes) = @_;
+	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'SELECT_AND_READ',$device,$readcommand,$numbytes); 
 	return $self->{io}->data_write($onewire_packet);
 }
 
-sub onewire_skip {
-	my ($self, $pin) = @_;
-	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'SKIP');
-	return $self->{io}->data_write($onewire_packet);
-}
-
-sub onewire_write {
+sub onewire_skip_and_write { #PIN,COMMAND,DATA
 	my ($self, $pin, $data) = @_;
-	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'WRITE',$data);
+	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'SKIP_AND_WRITE',$data);
 	return $self->{io}->data_write($onewire_packet);
 }
 
-sub onewire_read {
-	my ($self, $pin, $numbytes) = @_;
-	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'READ',$numbytes);
+sub onewire_skip_and_read { #PIN,COMMAND,READCOMMAND,NUMBYTES
+	my ($self, $pin, $readcommand, $numbytes) = @_;
+	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'SKIP_AND_READ',$readcommand,$numbytes);
 	return $self->{io}->data_write($onewire_packet);
 }
 
