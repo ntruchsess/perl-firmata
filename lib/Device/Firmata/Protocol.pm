@@ -698,25 +698,27 @@ sub packet_onewire_request {
 			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
 				$ONE_WIRE_COMMANDS->{SEARCH} );
 		};
-		
+
 		$command eq 'CONFIG' and do {
 			my $power = shift @args;
 			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{CONFIG},( defined $power ) ? $power : 1 );
+				$ONE_WIRE_COMMANDS->{CONFIG},
+				( defined $power ) ? $power : 1
+			);
 		};
-		
+
 		$command eq 'REPORT_CONFIG' and do {
 			my $device = shift @args;
 			my $config = shift @args;
 			my @buffer;
 			push_onewire_device_as_two_7bit( $device, \@buffer );
-			push_value_as_two_7bit ($config->{preReadCommand}, \@buffer);
-			push_value_as_two_7bit ($config->{readDelay}, \@buffer);
-			push_value_as_two_7bit ($config->{readCommand}, \@buffer);
-			push_value_as_two_7bit ($config->{numBytes}, \@buffer);
+			push_value_as_two_7bit( $config->{preReadCommand}, \@buffer );
+			push_value_as_two_7bit( $config->{readDelay},      \@buffer );
+			push_value_as_two_7bit( $config->{readCommand},    \@buffer );
+			push_value_as_two_7bit( $config->{numBytes},       \@buffer );
 			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{REPORT_CONFIG}, @buffer);
-		}
+				$ONE_WIRE_COMMANDS->{REPORT_CONFIG}, @buffer );
+		  }
 	}
 }
 
@@ -772,8 +774,8 @@ sub shift14bit {
 	my $msb = shift @$data;
 	return
 	    defined $lsb
-	  ? defined $msb 
-		  ? ( $msb << 7 ) + ( $lsb & 0x7f ) 
+	  ? defined $msb
+		  ? ( $msb << 7 ) + ( $lsb & 0x7f )
 		  : $lsb
 	  : undef;
 }
