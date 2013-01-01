@@ -156,7 +156,7 @@ sub message_data_receive {
 				command     => $command,
 				command_str => $protocol_lookup->{$command} || 'END_SYSEX',
 			  };
-			shift @$buffer;
+			# shift @$buffer;
 		}
 
 # Regardless of the SYSEX mode we are in, we will allow commands to interrupt the flowthrough
