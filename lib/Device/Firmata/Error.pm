@@ -1,6 +1,12 @@
 package Device::Firmata::Error;
 # ==================================================================
 
+=head1 NAME
+
+Device::Firmata::Error - Error handlers
+
+=cut
+
 use strict;
 use Exporter;
 use vars qw/ 
@@ -18,22 +24,28 @@ use Device::Firmata::Base;
 
 $FIRMATA_ERROR_DEFAULT = -1;
 
+
+=head2 error
+
+The base error reporting system. All errors will be
+stored in this object until the errors flush code is called.
+This will allow the system to collect all errors that occur
+in various parts of the system in one place. Very useful
+for error reporting since it's a simple call to find
+out the last error.
+
+Invocation of this function
+
+  $err->error( [numerical error level], ErrorMessage, ... parameters ... );
+  
+ErrorMessage can be in the format "KEY" that will be referenced by 
+Device::Firmata::Base->language or "KEY:Message" where if ->language does
+not map to anything, the error will default to Message 
+
+=cut
+
 sub error {
 # --------------------------------------------------
-# The base error reporting system. All errors will be
-# stored in this object until the errors flush code is called.
-# This will allow the system to collect all errors that occur
-# in various parts of the system in one place. Very useful
-# for error reporting since it's a simple call to find
-# out the last error.
-# 
-# Invocation of this function
-#
-#   $err->error( [numerical error level], ErrorMessage, ... parameters ... );
-#   
-#   ErrorMessage can be in the format "KEY" that will be referenced by 
-#   Device::Firmata::Base->language or "KEY:Message" where if ->language does not map
-#   to anything, the error will default to Message 
 #
     my $self        = shift;
     my $error_level = $_[0] =~ /^\-?\d+$/ ? shift : $FIRMATA_ERROR_DEFAULT;
@@ -65,6 +77,11 @@ sub error {
 
     return $text;
 }
+
+
+=head2 errors_flush
+
+=cut
 
 sub errors_flush {
 # --------------------------------------------------

@@ -16,6 +16,12 @@ use vars qw/
     $FIRMATA_LOCALE_MESSAGES 
 /;
 
+=head1 NAME
+
+Device::Firmata::Base -- Abstract baseclass for Device::Firmata modules
+
+=cut
+
 $FIRMATA_DEBUGGING = 1;
 
 $FIRMATA_ATTRIBS = {
@@ -26,10 +32,15 @@ $FIRMATA_LOCALE_PATH = '.';
 $FIRMATA_DEBUG_LEVEL = 0; 
 $FIRMATA_ERROR_CLASS = 'Device::Firmata::Error';
 
+=head1 METHODS
+
+=head2 import
+
+Ease the use of setting up configuration options
+
+=cut 
+
 sub import {
-# --------------------------------------------------
-# Ease the use of setting up configuration options
-#
     my $self = shift;
     my $pkg  = caller;
 
@@ -57,8 +68,11 @@ sub import {
     }
 }
 
+=head2 new
+
+=cut
+
 sub new {
-# --------------------------------------------------
     my $pkg = shift;
     my $basis = copy_struct( $pkg->init_class_attribs );
     my $self = bless $basis, $pkg;
@@ -76,12 +90,15 @@ sub new {
     return $self;
 }
 
+=head2 create
+
+A soft new as some objects will override new and 
+we don't want to cause problems but still want
+to invoice our creation code
+
+=cut
+
 sub create {
-# --------------------------------------------------
-# A soft new as some objects will override new and 
-# we don't want to cause problems but still want
-# to invoice our creation code
-#
     my $self = shift;
     my $basis = copy_struct( $self->init_class_attribs );
 
@@ -100,6 +117,10 @@ sub create {
     return $self;
 }
 
+=head2 init_instance_attribs
+
+=cut
+
 sub init_instance_attribs {
 # --------------------------------------------------
     my $self = shift;
@@ -113,6 +134,10 @@ sub init_instance_attribs {
 
     return $self;
 }
+
+=head2 init_class_attribs
+
+=cut 
 
 sub init_class_attribs {
 # --------------------------------------------------
@@ -154,7 +179,11 @@ sub init_class_attribs {
 
 
 
-# Utiilty functions
+# Utilty functions
+
+=head2 parameters
+
+=cut
 
 sub parameters {
 # --------------------------------------------------
@@ -171,6 +200,10 @@ sub parameters {
 
     return {@_};
 }
+
+=head2 copy_struct
+
+=cut
 
 sub copy_struct {
 # --------------------------------------------------
@@ -195,11 +228,19 @@ sub copy_struct {
     return $s;
 }
 
+=head2 locale
+
+=cut
+
 sub locale {
 # --------------------------------------------------
     @_ >= 2 and shift;
     $FIRMATA_LOCALE = shift;
 }
+
+=head2 locale_path
+
+=cut
 
 sub locale_path {
 # --------------------------------------------------
@@ -207,12 +248,20 @@ sub locale_path {
     $FIRMATA_LOCALE_PATH = shift;
 }
 
+=head2 language
+
+=cut
+
 sub language {
 # --------------------------------------------------
     my $self = shift;
     require Device::Firmata::Language;
     return Device::Firmata::Language->language(@_);
 }
+
+=head2 error
+
+=cut
 
 sub error {
 # --------------------------------------------------
@@ -231,11 +280,16 @@ sub error {
     return $err_msg;
 }
 
+=head2 init_error
+
+Creates the global error object that will collect
+all error messages generated on the system. This
+function can be called as many times as desired.
+
+=cut
+
 sub init_error {
 # --------------------------------------------------
-# Creates the global error object that will collect
-# all error messages generated on the system. This
-# function can be called as many times as desired.
 #
     $FIRMATA_ERROR and return $FIRMATA_ERROR;
 
@@ -254,21 +308,35 @@ sub init_error {
     return $FIRMATA_ERROR;
 }
 
+=head2 fatal
+
+Handle tragic and unrecoverable messages
+
+=cut
+
 sub fatal {
 # --------------------------------------------------
-# Handle tragic and unrecoverable messages
 #
     my $self = shift;
     return $self->error( -1, @_ );
 }
 
+=head2 warn
+
+Handle tragic and unrecoverable messages
+
+=cut
+
 sub warn {
 # --------------------------------------------------
-# Handle tragic and unrecoverable messages
 #
     my $self = shift;
     return $self->error( 0, @_ );
 }
+
+=head2 debug
+
+=cut
 
 sub debug {
 # --------------------------------------------------
@@ -276,10 +344,18 @@ sub debug {
     $FIRMATA_DEBUG_LEVEL = $debug;
 }
 
+=head2 DESTROY
+
+=cut
+
 sub DESTROY {
 # --------------------------------------------------
     my $self = shift;
 }
+
+=head2 AUTOLOAD
+
+=cut
 
 sub AUTOLOAD {
 # --------------------------------------------------
@@ -300,11 +376,15 @@ sub AUTOLOAD {
 # Object instantiation code
 ####################################################
 
+=head2 object_load
+
+Load the appropriate package and attempt to initialize
+the object as well
+
+=cut
+
 sub object_load {
 # --------------------------------------------------
-# Load the appropriate package and attempt to initialize
-# the object as well
-#
     my $self         = shift;
     my $object_class = shift;
     return unless $object_class =~ /^\w+(?:::\w+)*$/; # TODO ERROR MESSAGE

@@ -1,6 +1,12 @@
 package Device::Firmata::Language;
 # ==================================================================
 
+=head1 NAME
+
+Device::Firmata::Language - Localization
+
+=cut
+
 use strict;
 use vars qw/
         $FIRMATA_LOCALE 
@@ -18,13 +24,28 @@ $FIRMATA_LOCALE_MESSAGES = {
 $FIRMATA_LOCALE = 'en';
 $FIRMATA_LOCALE_PATH = '.';
 
+
+=head2 numbers
+
+=cut
+
 sub numbers {
 # --------------------------------------------------
 }
 
+
+=head2 date
+
+=cut
+
 sub date {
 # --------------------------------------------------
 }
+
+
+=head2 language
+
+=cut
 
 sub language {
 # --------------------------------------------------
