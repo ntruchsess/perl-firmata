@@ -24,7 +24,7 @@ use Device::Firmata::Base
   FIRMATA_ATTRIBS => {
 	buffer           => [],
 	parse_status     => MIDI_PARSE_NORMAL,
-	protocol_version => 'V_2_01',
+	protocol_version => 'V_2_04', # We are starting with the highest protocol
   };
 
 $MIDI_DATA_SIZES = {
