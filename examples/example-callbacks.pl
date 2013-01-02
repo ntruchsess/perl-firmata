@@ -14,8 +14,11 @@ my $analog_pin = 0;
 
 my $device = Device::Firmata->open('/dev/ttyUSB0') or die "Could not connect to Firmata Server";
 
-print "Firmware: ".$device->{metadata}{firmware}."\n";
-print "Version: ".$device->{metadata}{firmware_version}."\n";
+printf "   Firmware name: %s\n",$device->{metadata}{firmware};
+printf "Firmware version: %s\n",$device->{metadata}{firmware_version};
+
+do { $device->{protocol}->{protocol_version} = $_ if $device->{metadata}{firmware_version} eq $_ } foreach keys %$COMMANDS;
+printf "Protocol version: %s\n",$device->{protocol}->{protocol_version};
 
 $device->pin_mode($led_pin=>PIN_OUTPUT);
 $device->pin_mode($input_pin=>PIN_INPUT);
