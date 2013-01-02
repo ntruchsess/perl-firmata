@@ -434,15 +434,16 @@ sub handle_analog_mapping_response {
 
 	my ( $self, $sysex_data ) = @_;
 
-	my @pins;
+	# my @pins;
 
-	my $pin_mapping = shift @$sysex_data;
+	# my $pin_mapping = shift @$sysex_data;
 
-	while ( defined $pin_mapping ) {
-		push @pins, $pin_mapping;
-	}
+	# while ( defined $pin_mapping ) {
+	#	push @pins, $pin_mapping;
+	# }
 
-	return { pins => \@pins };
+	# return { pins => \@pins };
+	return { pins => $sysex_data }; # FIXME how to handle this?
 
 }
 
