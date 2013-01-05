@@ -544,9 +544,8 @@ sub handle_i2c_reply {
 
 	my ( $self, $sysex_data ) = @_;
 
-	my $slave_address =
-	  ( shift @$sysex_data & 0x7f ) + ( shift @$sysex_data << 7 );
-	my $register = ( shift @$sysex_data & 0x7f ) + ( shift @$sysex_data << 7 );
+	my $slave_address = ( ( shift @$sysex_data ) & 0x7f ) + ( ( shift @$sysex_data ) << 7 );
+	my $register = ( ( shift @$sysex_data ) & 0x7f ) + ( ( shift @$sysex_data ) << 7 );
 
 	my @data;
 
