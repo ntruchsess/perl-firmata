@@ -224,10 +224,10 @@ printf "Protocol version: %s\n",$self->{protocol}->{protocol_version};
 
 =head2 probe
 
-On device boot time we wait 3 seconds for firmware name.
+On device boot time we wait 3 seconds for firmware name
+that the target device is using.
 Sometimes, we'll have to wait a couple of seconds for it.
-If not received the starting message, then request the version
-of the protocol that the target device is using.
+If not received the starting message, then request the firmware name.
 And wait for response another 3 seconds and rapidly fire requests if 
 we don't get a response quickly enough ;)
 If the response received, then we'll try to choose the right version of protocol.
@@ -262,7 +262,7 @@ sub probe {
         if ( $query_tics <= time ) {
 
             # Query the device for information on the firmata firmware_version
-            my $query_packet = $self->{protocol}->packet_query_version;
+            my $query_packet = $self->{protocol}->packet_query_firmware;
             $self->{io}->data_write($query_packet) or die "OOPS: $!";
 
             # Query every x seconds
