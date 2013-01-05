@@ -215,9 +215,9 @@ sub choose_version {
 
 	do { $self->{protocol}->{protocol_version} = $_ if $self->{metadata}{firmware_version} eq $_ } foreach keys %$COMMANDS;
 
-printf "        Firmware: %s\n",$self->{metadata}{firmware} if $self->{metadata}{firmware};
-printf "Firmware version: %s\n",$self->{metadata}{firmware_version} if $self->{metadata}{firmware_version};
-printf "Protocol version: %s\n",$self->{protocol}->{protocol_version};
+$Device::Firmata::DEBUG && printf "        Firmware: %s\n",$self->{metadata}{firmware} if $self->{metadata}{firmware};
+$Device::Firmata::DEBUG && printf "Firmware version: %s\n",$self->{metadata}{firmware_version} if $self->{metadata}{firmware_version};
+$Device::Firmata::DEBUG && printf "Protocol version: %s\n",$self->{protocol}->{protocol_version};
 
 }
 
