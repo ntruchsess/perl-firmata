@@ -179,7 +179,7 @@ sub init_class_attribs {
 
 
 
-# Utiilty functions
+# Utilty functions
 
 =head2 parameters
 

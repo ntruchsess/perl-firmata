@@ -28,6 +28,12 @@ use Device::Firmata::Base
         ports            => [],
         analog_pins      => [],
         pins             => {},
+        
+# To notify on events
+        observer         => [],
+        digital_observer => [],
+        analog_observer  => [],
+        onewire_observer => [],
 
 # For information about the device. eg: firmware version
         metadata         => {},
@@ -44,15 +50,35 @@ to find out how to connect to the device
 sub open {
 # --------------------------------------------------
     my ( $pkg, $port, $opts ) = @_;
+    
+    my $self = ref $pkg ? $pkg : $pkg->new($opts);
+
+    my $ioport = Device::Firmata::IO->open($port,$opts) or return;
+    
+    return $self->attach($ioport,$opts);
+}
+
+sub attach {
+# --------------------------------------------------
+# Attach to an open IO port and do some basic operations
+# to find out how to connect to the device
+#
+    my ( $pkg, $port, $opts ) = @_;
 
     my $self = ref $pkg ? $pkg : $pkg->new($opts);
 
-    $self->{io}       = Device::Firmata::IO->open($port,$opts) or return;
-    $self->{protocol} = Device::Firmata::Protocol->new($opts)  or return;
+    $self->{io}       = $port or return;
+    $self->{protocol} = Device::Firmata::Protocol->new($opts) or return;
 
     return $self;
 }
 
+sub detach {
+
+	my $self = shift;
+	
+	delete $self->{io};
+}
 
 =head2 messages_handle
 
@@ -81,6 +107,20 @@ sub messages_handle {
             $command eq 'DIGITAL_MESSAGE' and do {
                 my $port_number = $message->{command} & 0x0f;
                 my $port_state  = $data->[0] | ($data->[1] << 7);
+               	my $old_state = $self->{ports}[$port_number];
+               	my $changed_state = defined $old_state ? $old_state ^ $port_state : 0xFF;
+               	my $observers = $self->{digital_observer};
+               	my $pinbase = $port_number<<3;
+               	for (my $i=0;$i<8;$i++) {
+               		my $pin = $pinbase+$i;
+               		my $observer = $observers->[$pin];
+               		if ($observer) {
+               			my $pin_mask = 1<<$i;
+               			if ($changed_state & $pin_mask) {
+               				&$observer($pin,defined $old_state ? ($old_state & $pin_mask) > 0 ? 1 : 0 : undef ,($port_state & $pin_mask) > 0 ? 1 : 0);
+               			}
+               		}
+               	}
                 $self->{ports}[$port_number] = $port_state;
             };
 
@@ -88,6 +128,13 @@ sub messages_handle {
             $command eq 'ANALOG_MESSAGE' and do {
                 my $pin_number = $message->{command} & 0x0f;
                 my $pin_value = ( $data->[0] | ($data->[1] << 7) ) / 1023;
+                my $observer = $self->{analog_observer}[$pin_number];
+                if ($observer) {
+                	my $old_value = $self->{analog_pins}[$pin_number];
+	               	if (!defined $old_value or $old_value != $pin_value) {
+                		&$observer($pin_number,$old_value,$pin_value);
+	              	}
+                }
                 $self->{analog_pins}[$pin_number] = $pin_value;
             };
 
@@ -110,7 +157,9 @@ sub messages_handle {
             $command eq 'END_SYSEX' and do {
                 my $sysex_data = $self->{sysex_data};
                 my $sysex_message = $proto->sysex_parse($sysex_data);
-                $self->sysex_handle($sysex_message);
+                if (defined $sysex_message) {
+                	$self->sysex_handle($sysex_message);
+                }
                 $self->{sysex_data} = [];
                 last;
             };
@@ -137,11 +186,20 @@ sub sysex_handle {
 
     my $data = $sysex_message->{data};
 
-    $sysex_message->{command_str} eq 'REPORT_FIRMWARE' and do {
-        $self->{metadata}{firmware_version} = sprintf "V_%i_%02i", $data->[0], $data->[1];
-        $self->{metadata}{firmware} = $data->[2];
-        return;
-    };
+	COMMAND_HANDLER : {	
+    	$sysex_message->{command_str} eq 'REPORT_FIRMWARE' and do {
+    	    $self->{metadata}{firmware_version} = sprintf "V_%i_%02i", $data->{major_version}, $data->{minor_version};
+	        $self->{metadata}{firmware} = $data->{firmware};
+        	last;
+    	};
+    
+	    $sysex_message->{command_str} eq 'ONEWIRE_REPLY' and do {
+			my $pin = $data->{pin};
+			my $observer = $self->{onewire_observer}[$pin];
+			&$observer($pin,$data);    	
+    		last;
+	    }
+	}
 }
 
 
@@ -172,25 +230,20 @@ sub probe {
 
         if ( $query_tics <= time ) {
 # Query the device for information on the firmata firmware_version
-            my $query_packet = $proto->packet_query_version;
+            my $query_packet = $proto->packet_query_firmware;
             $io->data_write($query_packet) or die "OOPS: $!";
             $query_tics = time + 0.5;
         };
 
 # Try to get a response
-        my $buf = $io->data_read(100) or do {
-                        select undef, undef, undef, 0.1;
-                        next;
-                    };
-        my $messages = $proto->message_data_receive($buf);
+		$self->poll;
 
-# Start handling the messages
-        $self->messages_handle($messages);
-
-        if ( $self->{metadata}{firmware_version} ) {
-            return $self->{metadata}{firmware_version};
+        if ( $self->{metadata}{firmware} && $self->{metadata}{firmware_version}) {
+        	$self->{protocol}->{protocol_version} = $self->{metadata}{firmware_version}; 
+            return 1;
         }
     }
+    return undef;
 }
 
 
@@ -205,28 +258,33 @@ sub pin_mode {
 # --------------------------------------------------
     my ( $self, $pin, $mode ) = @_;
 
-    if ( $mode == PIN_INPUT or $mode == PIN_OUTPUT ) {
+    ( $mode == PIN_INPUT or $mode == PIN_OUTPUT ) and do {
         my $port_number = $pin >> 3;
         my $mode_packet = $self->{protocol}->message_prepare( REPORT_DIGITAL => $port_number, 1 );
         $self->{io}->data_write($mode_packet);
 
         $mode_packet = $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
         return $self->{io}->data_write($mode_packet);
-    }
+    };
 
-    elsif ( $mode == PIN_PWM ) {
+    $mode == PIN_PWM and do {
         my $mode_packet = $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
         return $self->{io}->data_write($mode_packet);
-    }
+    };
 
-    elsif ( $mode == PIN_ANALOG ) {
+    $mode == PIN_ANALOG and do {
         my $port_number = $pin >> 3;
         my $mode_packet = $self->{protocol}->message_prepare( REPORT_ANALOG => $port_number, 1 );
         $self->{io}->data_write($mode_packet);
 
         $mode_packet = $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
         return $self->{io}->data_write($mode_packet);
-    }
+    };
+    
+    $mode == PIN_ONEWIRE and do {
+    	my $mode_packet = $self->{protocol}->message_prepare ( SET_PIN_MODE => 0, $pin, $mode );
+    	return $self->{io}->data_write($mode_packet);
+    };
 
 }
 
@@ -316,6 +374,71 @@ pmw_write is an alias for analog_write
 =cut
 *pwm_write = *analog_write;
 
+sub firmware_version_query {
+    my $self = shift;
+    my $firmware_version_query_packet = $self->{protocol}->packet_query_firmware;
+	return $self->{io}->data_write($firmware_version_query_packet);
+}
+
+sub capability_query {
+    my $self = shift;
+	my $capability_query_packet = $self->{protocol}->packet_query_capability();
+	return $self->{io}->data_write($capability_query_packet);
+}
+
+sub analog_mapping_query {
+    my $self = shift;
+	my $analog_mapping_query_packet = $self->{protocol}->packet_query_analog_mapping();
+	return $self->{io}->data_write($analog_mapping_query_packet);
+}
+
+sub sampling_interval {
+	my ($self, $sampling_interval) = @_;
+	my $sampling_interval_packet = $self->{protocol}->packet_sampling_interval($sampling_interval);
+	return $self->{io}->data_write($sampling_interval_packet);
+}
+
+sub onewire_config {
+	my ($self, $pin, $power) = @_;
+	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'CONFIG',$power);
+	return $self->{io}->data_write($onewire_packet);
+}
+
+sub onewire_report_config {
+	my ($self,$pin,$device,$config) = @_;
+	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'REPORT_CONFIG',$device,$config);
+	return $self->{io}->data_write($onewire_packet);
+}
+
+sub onewire_search {
+	my ($self, $pin) = @_;
+	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'SEARCH');
+	return $self->{io}->data_write($onewire_packet);
+}
+
+sub onewire_select_and_write { #PIN,COMMAND,ADDRESS,DATA
+	my ($self, $pin, $device, $data) = @_;
+	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'SELECT_AND_WRITE',$device,$data); 
+	return $self->{io}->data_write($onewire_packet);
+}
+
+sub onewire_select_and_read { #PIN,COMMAND,ADDRESS,READCOMMAND,NUMBYTES
+	my ($self, $pin, $device, $readcommand, $numbytes) = @_;
+	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'SELECT_AND_READ',$device,$readcommand,$numbytes); 
+	return $self->{io}->data_write($onewire_packet);
+}
+
+sub onewire_skip_and_write { #PIN,COMMAND,DATA
+	my ($self, $pin, $data) = @_;
+	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'SKIP_AND_WRITE',$data);
+	return $self->{io}->data_write($onewire_packet);
+}
+
+sub onewire_skip_and_read { #PIN,COMMAND,READCOMMAND,NUMBYTES
+	my ($self, $pin, $readcommand, $numbytes) = @_;
+	my $onewire_packet = $self->{protocol}->packet_onewire_request($pin,'SKIP_AND_READ',$readcommand,$numbytes);
+	return $self->{io}->data_write($onewire_packet);
+}
 
 =head2 poll
 
@@ -332,6 +455,21 @@ sub poll {
     my $messages = $self->{protocol}->message_data_receive($buf);
     $self->messages_handle($messages);
     return $messages;
+}
+
+sub observe_digital {
+	my ($self,$pin,$observer) = @_;
+	$self->{digital_observer}[$pin]=$observer; 
+}
+
+sub observe_analog {
+	my ($self,$pin,$observer) = @_;
+	$self->{analog_observer}[$pin]=$observer; 
+}
+
+sub observe_onewire {
+	my ($self,$pin,$observer) = @_;
+	$self->{onewire_observer}[$pin]=$observer; 
 }
 
 1;
