@@ -7,7 +7,7 @@ Device::Firmata::Platform - platform specifics
 =cut
 
 use strict;
-use Time::HiRes qw/time/;
+use Time::HiRes qw/time sleep/;
 use Device::Firmata::Constants qw/ :all /;
 use Device::Firmata::IO;
 use Device::Firmata::Protocol;
@@ -203,47 +203,79 @@ sub sysex_handle {
 }
 
 
+=head2 choose_version
+
+Try to find the appropriate version of protocol.
+
+=cut
+
+sub choose_version {
+
+	my $self = shift;
+
+	do { $self->{protocol}->{protocol_version} = $_ if $self->{metadata}{firmware_version} eq $_ } foreach keys %$COMMANDS;
+
+printf "        Firmware: %s\n",$self->{metadata}{firmware} if $self->{metadata}{firmware};
+printf "Firmware version: %s\n",$self->{metadata}{firmware_version} if $self->{metadata}{firmware_version};
+printf "Protocol version: %s\n",$self->{protocol}->{protocol_version};
+
+}
+
+
 =head2 probe
 
-Request the version of the protocol that the
-target device is using. Sometimes, we'll have to
-wait a couple of seconds for the response so we'll
-try for 2 seconds and rapidly fire requests if 
+On device boot time we wait 3 seconds for firmware name.
+Sometimes, we'll have to wait a couple of seconds for it.
+If not received the starting message, then request the version
+of the protocol that the target device is using.
+And wait for response another 3 seconds and rapidly fire requests if 
 we don't get a response quickly enough ;)
+If the response received, then we'll try to choose the right version of protocol.
 
 =cut
 
 sub probe {
-# --------------------------------------------------
-    my ( $self ) = @_;
 
-    my $proto  = $self->{protocol};
-    my $io     = $self->{io};
-    $self->{metadata}{firmware_version} = '';
+    my ($self) = @_;
 
-# Wait for 10 seconds only
-    my $end_tics = time + 10;
+    my $time     = time;
 
-# Query every .5 seconds
-    my $query_tics = time;
+    # Wait for 3 seconds only
+    my $end_tics = $time + 3;
+
     while ( $end_tics >= time ) {
-
-        if ( $query_tics <= time ) {
-# Query the device for information on the firmata firmware_version
-            my $query_packet = $proto->packet_query_firmware;
-            $io->data_write($query_packet) or die "OOPS: $!";
-            $query_tics = time + 0.5;
+        ($self->poll && $self->{metadata}{firmware}) or do {
+            sleep 0.1;
+            next;
         };
-
-# Try to get a response
-		$self->poll;
-
-        if ( $self->{metadata}{firmware} && $self->{metadata}{firmware_version}) {
-        	$self->{protocol}->{protocol_version} = $self->{metadata}{firmware_version}; 
-            return 1;
-        }
+        $self->choose_version;
+        return;
     }
-    return undef;
+
+    $time = time;
+    my $query_tics = $time;
+
+    # Wait for 3 seconds only
+    $end_tics = $time + 3;
+
+    while ( $end_tics >= time ) {
+        if ( $query_tics <= time ) {
+
+            # Query the device for information on the firmata firmware_version
+            my $query_packet = $self->{protocol}->packet_query_version;
+            $self->{io}->data_write($query_packet) or die "OOPS: $!";
+
+            # Query every x seconds
+            $query_tics = time + 1;
+        }
+
+        ($self->poll && $self->{metadata}{firmware}) or do {
+            sleep .001;
+            next;
+        };
+        $self->choose_version;
+        return;
+    }
 }
 
 
