@@ -24,7 +24,7 @@ use Device::Firmata::Base
   FIRMATA_ATTRIBS => {
 	buffer           => [],
 	parse_status     => MIDI_PARSE_NORMAL,
-	protocol_version => 'V_2_01',
+	protocol_version => 'V_2_04', # We are starting with the highest protocol
   };
 
 $MIDI_DATA_SIZES = {
@@ -174,9 +174,6 @@ sub message_data_receive {
 # Regardless of the SYSEX mode we are in, we will allow commands to interrupt the flowthrough
 		elsif ( $buffer->[0] & MIDI_COMMAND ) {
 			my $command = $buffer->[0] & 0xf0;
-			if (( not defined $MIDI_DATA_SIZES->{$command}) || (not defined $MIDI_DATA_SIZES->{ $buffer->[0] })) {
-				print "buffer[0]: ".$buffer->[0];	
-			}
 			my $bytes =
 			  (      $MIDI_DATA_SIZES->{$command}
 				  || $MIDI_DATA_SIZES->{ $buffer->[0] } ) + 1;
@@ -449,15 +446,16 @@ sub handle_analog_mapping_response {
 
 	my ( $self, $sysex_data ) = @_;
 
-	my @pins;
+	# my @pins;
 
-	my $pin_mapping = shift @$sysex_data;
+	# my $pin_mapping = shift @$sysex_data;
 
-	while ( defined $pin_mapping ) {
-		push @pins, $pin_mapping;
-	}
+	# while ( defined $pin_mapping ) {
+	#	push @pins, $pin_mapping;
+	# }
 
-	return { pins => \@pins };
+	# return { pins => \@pins };
+	return { pins => $sysex_data }; # FIXME how to handle this?
 
 }
 
@@ -746,23 +744,6 @@ sub handle_onewire_reply {
 		}
 	}
 }
-
-#define CREATE_FIRMATA_TASK 0
-#define DELETE_FIRMATA_TASK 1
-#define ADD_TO_FIRMATA_TASK 3
-#define SCHEDULE_FIRMATA_TASK 4
-#define QUERY_ALL_FIRMATA_TASKS 5
-#define QUERY_FIRMATA_TASK 6
-
-#$SCHEDULER_COMMANDS = {
-#	CREATE_FIRMATA_TASK     => 0,
-#	DELETE_FIRMATA_TASK     => 1,
-#	ADD_TO_FIRMATA_TASK     => 3,
-#	SCHEDULE_FIRMATA_TASK   => 4,
-#	QUERY_ALL_FIRMATA_TASKS => 5,
-#	QUERY_FIRMATA_TASK      => 6,
-#   RESET_FIRMATA_TASKS     => 7,
-#};
 
 sub packet_create_task {
 	my ($self,$id,$len) = @_;
