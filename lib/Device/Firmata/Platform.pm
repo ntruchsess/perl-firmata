@@ -419,6 +419,24 @@ pmw_write is an alias for analog_write
 
 *pwm_write = *analog_write;
 
+sub firmware_version_query {
+    my $self = shift;
+    my $firmware_version_query_packet = $self->{protocol}->packet_query_firmware;
+	return $self->{io}->data_write($firmware_version_query_packet);
+}
+
+sub capability_query {
+    my $self = shift;
+	my $capability_query_packet = $self->{protocol}->packet_query_capability();
+	return $self->{io}->data_write($capability_query_packet);
+}
+
+sub analog_mapping_query {
+    my $self = shift;
+	my $analog_mapping_query_packet = $self->{protocol}->packet_query_analog_mapping();
+	return $self->{io}->data_write($analog_mapping_query_packet);
+}
+
 sub sampling_interval {
 	my ( $self, $sampling_interval ) = @_;
 	my $sampling_interval_packet =
