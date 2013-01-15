@@ -40,20 +40,33 @@ $MIDI_DATA_SIZES = {
 	# Special for version queries
 	0xF4 => 2,
 	0xF9 => 2,
-
-	0x79 => 0,
-	0x7A => 2,
 };
 
 our $ONE_WIRE_COMMANDS = {
-	SEARCH           => 0,
-	SKIP_AND_WRITE   => 1,
-	SKIP_AND_READ    => 2,
-	SELECT_AND_WRITE => 3,
-	SELECT_AND_READ  => 4,
-	READ             => 5,
-	CONFIG           => 6,
-	REPORT_CONFIG    => 7,
+	SEARCH_REQUEST     => 0x40,
+	CONFIG_REQUEST     => 0x41,
+	SEARCH_REPLY       => 0x42,
+	READ_REPLY         => 0x43,
+	RESET_REQUEST_BIT  => 0x01,
+	SKIP_REQUEST_BIT   => 0x02,
+	SELECT_REQUEST_BIT => 0x04,
+	READ_REQUEST_BIT   => 0x08,
+	DELAY_REQUEST_BIT  => 0x10,
+	WRITE_REQUEST_BIT  => 0x20,
+};
+
+our $SCHEDULER_COMMANDS = {
+	CREATE_FIRMATA_TASK     => 0,
+	DELETE_FIRMATA_TASK     => 1,
+	ADD_TO_FIRMATA_TASK     => 2,
+	DELAY_FIRMATA_TASK      => 3,
+	SCHEDULE_FIRMATA_TASK   => 4,
+	QUERY_ALL_FIRMATA_TASKS => 5,
+	QUERY_FIRMATA_TASK      => 6,
+	RESET_FIRMATA_TASKS     => 7,
+	ERROR_TASK_REPLY        => 8,
+	QUERY_ALL_TASKS_REPLY   => 9,
+	QUERY_TASK_REPLY        => 10,
 };
 
 =head1 DESCRIPTION
@@ -156,7 +169,6 @@ sub message_data_receive {
 				command     => $command,
 				command_str => $protocol_lookup->{$command} || 'END_SYSEX',
 			  };
-			# shift @$buffer;
 		}
 
 # Regardless of the SYSEX mode we are in, we will allow commands to interrupt the flowthrough
@@ -262,8 +274,8 @@ sub sysex_parse {
 				last;
 			};
 
-			$command == $protocol_commands->{ONEWIRE_CONFIG} and do {
-				$return_data = $self->handle_onewire_config($sysex_data);
+			$command == $protocol_commands->{SCHEDULER_REPLY} and do {
+				$return_data = $self->handle_scheduler_reply($sysex_data);
 				last;
 			};
 
@@ -634,136 +646,184 @@ sub packet_servo_config {
 # * 2  value msb
 # */
 
-# ONE_WIRE_COMMANDS:
-#	SEARCH           => 0,
-#	RESET            => 1,
-#	SKIP_AND_WRITE   => 2,
-#	SKIP_AND_READ    => 3,
-#	SELECT_AND_WRITE => 4,
-#	SELECT_AND_READ  => 5,
-#   CONFIG           => 6,
+sub packet_onewire_search_request {
+	my ( $self, $pin ) = @_;
+	return $self->packet_sysex_command( ONEWIRE_REQUEST,$ONE_WIRE_COMMANDS->{SEARCH_REQUEST},$pin);
+};
+
+sub packet_onewire_config_request {
+	my ( $self, $pin, $power ) = @_;
+	return $self->packet_sysex_command( ONEWIRE_REQUEST, $ONE_WIRE_COMMANDS->{CONFIG_REQUEST},$pin,
+		( defined $power ) ? $power : 1
+	);
+};
+
+#$args = {
+#	reset => undef | 1,
+#	skip => undef | 1,
+#	select => undef | device,
+#	read => undef | short int,
+#	delay => undef | long int,
+#	write => undef | bytes[],
+#}
 
 sub packet_onewire_request {
-
-	my ( $self, $pin, $command, @args ) = @_;
-
-  COMMAND_HANDLER: {
-
-		$command eq 'SELECT_AND_WRITE'
-		  and do {    #PIN,COMMAND,ADDRESS,NUMBYTES,DATA
-			my $device   = shift @args;
-			my $data     = shift @args;
-			my $numbytes = @$data;
-			my @buffer;
-			push_onewire_device_as_two_7bit( $device, \@buffer );
-			push_value_as_two_7bit( $numbytes, \@buffer );
-			push_array_as_two_7bit( $data, \@buffer );
-			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{SELECT_AND_WRITE}, @buffer );
-		  };
-
-		$command eq 'SELECT_AND_READ'
-		  and do {    #PIN,COMMAND,ADDRESS,READCOMMAND,NUMBYTES
-			my $device      = shift @args;
-			my $readcommand = shift @args;
-			my $numbytes    = shift @args;
-			my @buffer;
-			push_onewire_device_as_two_7bit( $device, \@buffer );
-			push_value_as_two_7bit( $readcommand, \@buffer );
-			push_value_as_two_7bit( $numbytes,    \@buffer );
-			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{SELECT_AND_READ}, @buffer );
-		  };
-
-		$command eq 'SKIP_AND_WRITE' and do {    #PIN,COMMAND,NUMBYTES,DATA
-			my $data     = shift @args;
-			my $numbytes = @$data;
-			my @buffer;
-			push_value_as_two_7bit( $numbytes, \@buffer );
-			push_array_as_two_7bit( $data, \@buffer );
-			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{SKIP_AND_WRITE}, @buffer );
-		};
-
-		$command eq 'SKIP_AND_READ' and do {   #PIN,COMMAND,READCOMMAND,NUMBYTES
-			my $readcommand = shift @args;
-			my $numbytes    = shift @args;
-			my @buffer;
-			push_value_as_two_7bit( $readcommand, \@buffer );
-			push_value_as_two_7bit( $numbytes,    \@buffer );
-			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{SKIP_AND_READ}, @buffer );
-		};
-
-		$command eq 'SEARCH' and do {
-			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{SEARCH} );
-		};
-		
-		$command eq 'CONFIG' and do {
-			my $power = shift @args;
-			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{CONFIG},( defined $power ) ? $power : 1 );
-		};
-		
-		$command eq 'REPORT_CONFIG' and do {
-			my $device = shift @args;
-			my $config = shift @args;
-			my @buffer;
-			push_onewire_device_as_two_7bit( $device, \@buffer );
-			push_value_as_two_7bit ($config->{preReadCommand}, \@buffer);
-			push_value_as_two_7bit ($config->{readDelay}, \@buffer);
-			push_value_as_two_7bit ($config->{readCommand}, \@buffer);
-			push_value_as_two_7bit ($config->{numBytes}, \@buffer);
-			return $self->packet_sysex_command( ONEWIRE_REQUEST, $pin,
-				$ONE_WIRE_COMMANDS->{REPORT_CONFIG}, @buffer);
-		}
+	my ( $self, $pin, $args ) = @_;
+	my $subcommand = 0;
+	my @data;
+	if (defined $args->{reset}) {
+		$subcommand |= $ONE_WIRE_COMMANDS->{RESET_REQUEST_BIT};
 	}
-}
-
+	if (defined $args->{skip}) {
+		$subcommand |= $ONE_WIRE_COMMANDS->{SKIP_REQUEST_BIT};
+	}
+	if (defined $args->{select}) {
+		$subcommand |= $ONE_WIRE_COMMANDS->{SELECT_REQUEST_BIT};
+		push_onewire_device_to_byte_array($args->{select},\@data);
+	}
+	if (defined $args->{read}) {
+		$subcommand |= $ONE_WIRE_COMMANDS->{READ_REQUEST_BIT};
+		push @data,$args->{read} & 0xFF;
+		push @data,($args->{read}>>8) & 0xFF;
+	}
+	if (defined $args->{delay}) {
+		$subcommand |= $ONE_WIRE_COMMANDS->{DELAY_REQUEST_BIT};
+		push @data,$args->{delay} & 0xFF;
+		push @data,($args->{delay}>>8) & 0xFF;
+		push @data,($args->{delay}>>16) & 0xFF;
+		push @data,($args->{delay}>>24) & 0xFF;
+	}
+	if (defined $args->{write}) {
+		$subcommand |= $ONE_WIRE_COMMANDS->{WRITE_REQUEST_BIT};
+		my $writeBytes=$args->{write};
+		push @data,@$writeBytes;
+	}
+	return $self->packet_sysex_command( ONEWIRE_REQUEST, $subcommand, $pin, pack_as_7bit(@data));
+};
+		
 sub handle_onewire_reply {
 
 	my ( $self, $sysex_data ) = @_;
 
-	my $pin     = shift @$sysex_data;
 	my $command = shift @$sysex_data;
+	my $pin     = shift @$sysex_data;
 
 	if ( defined $command ) {
 	  COMMAND_HANDLER: {
 
-			$command == $ONE_WIRE_COMMANDS->{READ}
+			$command == $ONE_WIRE_COMMANDS->{READ_REPLY}
 			  and do {    #PIN,COMMAND,ADDRESS,DATA
 
-				my $device = shift_onewire_device_from_two_7bit($sysex_data);
-				my @data   = double_7bit_to_array($sysex_data);
+				my @data = unpack_from_7bit(@$sysex_data);
+				my $device = shift_onewire_device_from_byte_array(\@data);
 
 				return {
 					pin     => $pin,
-					command => 'READ',
+					command => 'READ_REPLY',
 					device  => $device,
 					data    => \@data
 				};
 			  };
 
-			$command == $ONE_WIRE_COMMANDS->{SEARCH}
+			$command == $ONE_WIRE_COMMANDS->{SEARCH_REPLY}
 			  and do {    #PIN,COMMAND,ADDRESS...
 
 				my @devices;
-
-				my $device = shift_onewire_device_from_two_7bit($sysex_data);
+				my @data = unpack_from_7bit(@$sysex_data);
+				my $device = shift_onewire_device_from_byte_array(\@data);
 				while ( defined $device ) {
 					push @devices, $device;
-					$device = shift_onewire_device_from_two_7bit($sysex_data);
+					$device = shift_onewire_device_from_byte_array(\@data);
 				}
 				return {
 					pin     => $pin,
-					command => 'SEARCH',
+					command => 'SEARCH_REPLY',
 					devices => \@devices,
 				};
 			  };
 		}
 	}
 }
+
+sub packet_create_task {
+	my ($self,$id,$len) = @_;
+	my $packet = $self->packet_sysex_command('SCHEDULER_REQUEST', $SCHEDULER_COMMANDS->{CREATE_FIRMATA_TASK}, $id, $len & 0x7F, $len>>7);
+	return $packet;
+}
+
+sub packet_delete_task {
+	my ($self,$id) = @_;
+	return $self->packet_sysex_command('SCHEDULER_REQUEST', $SCHEDULER_COMMANDS->{DELETE_FIRMATA_TASK}, $id);
+}
+
+sub packet_add_to_task {
+	my ($self,$id,@data) = @_;
+	my $packet = $self->packet_sysex_command('SCHEDULER_REQUEST', $SCHEDULER_COMMANDS->{ADD_TO_FIRMATA_TASK}, $id, pack_as_7bit(@data));
+	return $packet;
+}
+
+sub packet_schedule_task {
+	my ($self,$id,$time_ms) = @_;
+	my $packet = $self->packet_sysex_command('SCHEDULER_REQUEST', $SCHEDULER_COMMANDS->{SCHEDULE_FIRMATA_TASK}, $id, pack_as_7bit($time_ms & 0xFF, ($time_ms & 0xFF00)>>8, ($time_ms & 0xFF0000)>>16,($time_ms & 0xFF000000)>>24));
+	return $packet;
+}
+
+sub packet_query_all_tasks {
+	my $self = shift;
+	return $self->packet_sysex_command('SCHEDULER_REQUEST', $SCHEDULER_COMMANDS->{QUERY_ALL_FIRMATA_TASKS});
+}
+
+sub packet_query_task {
+	my ($self,$id) = @_;
+	return $self->packet_sysex_command('SCHEDULER_REQUEST', $SCHEDULER_COMMANDS->{QUERY_FIRMATA_TASK},$id);
+}
+
+sub packet_reset_scheduler {
+	my $self = shift;
+	return $self->packet_sysex_command('SCHEDULER_REQUEST', $SCHEDULER_COMMANDS->{RESET_FIRMATA_TASKS});
+}
+
+sub handle_scheduler_reply {
+	my ( $self, $sysex_data ) = @_;
+	
+	my $command = shift @$sysex_data;
+
+	if ( defined $command ) {
+	  COMMAND_HANDLER: {
+
+			$command == $SCHEDULER_COMMANDS->{QUERY_ALL_TASKS_REPLY} and do {
+				return {
+					command => 'QUERY_ALL_TASKS_REPLY',
+					ids => $sysex_data,
+				}
+			};
+			
+			($command == $SCHEDULER_COMMANDS->{QUERY_TASK_REPLY} or $command == $SCHEDULER_COMMANDS->{ERROR_TASK_REPLY}) and do {
+				
+				my $error = ($command == $SCHEDULER_COMMANDS->{ERROR_TASK_REPLY});
+				if (scalar @$sysex_data == 1) {
+					return {
+						command => ($error ? 'ERROR_TASK_REPLY' : 'QUERY_TASK_REPLY'),
+						id => shift @$sysex_data,
+					}
+				}
+				if (scalar @$sysex_data >= 11) {
+					my $id = shift @$sysex_data;
+					my @data = unpack_from_7bit(@$sysex_data);
+					return {
+						command => ($error ? 'ERROR_TASK_REPLY' : 'QUERY_TASK_REPLY'),
+						id => $id,
+						time_ms => shift @data | (shift @data)<<8 | (shift @data)<<16 | (shift @data)<<24,
+						len => shift @data  | (shift @data)<<8,
+						position => shift @data  | (shift @data)<<8,
+						messages => \@data,
+					}
+				}
+			};
+	  }
+	}
+}
+			
 
 sub shift14bit {
 
@@ -773,8 +833,8 @@ sub shift14bit {
 	my $msb = shift @$data;
 	return
 	    defined $lsb
-	  ? defined $msb 
-		  ? ( $msb << 7 ) + ( $lsb & 0x7f ) 
+	  ? defined $msb
+		  ? ( $msb << 7 ) + ( $lsb & 0x7f )
 		  : $lsb
 	  : undef;
 }
@@ -814,16 +874,19 @@ sub double_7bit_to_array {
 	return @ret;
 }
 
-sub shift_onewire_device_from_two_7bit {
+sub shift_onewire_device_from_byte_array {
 	my $buffer = shift;
 
-	my $family = shift14bit($buffer);
+	my $family = shift @$buffer;
 	if ( defined $family ) {
-		my @addressbytes = double_7bit_to_array( $buffer, 6 );
-		my $crc = shift14bit($buffer);
+		my @address;
+		for (my $i=0;$i<6;$i++) {
+			push @address,shift @$buffer;
+		}
+		my $crc = shift @$buffer;
 		return {
 			family   => $family,
-			identity => \@addressbytes,
+			identity => \@address,
 			crc      => $crc
 		};
 	}
@@ -839,13 +902,13 @@ sub push_value_as_two_7bit {
 	push @$buffer, ( $value >> 7 ) & 0x7f;    #MSB
 }
 
-sub push_onewire_device_as_two_7bit {
+sub push_onewire_device_to_byte_array {
 	my ( $device, $buffer ) = @_;
-	push_value_as_two_7bit( $device->{family}, $buffer );
+	push @$buffer, $device->{family};
 	for ( my $i = 0 ; $i < 6 ; $i++ ) {
-		push_value_as_two_7bit( $device->{identity}[$i], $buffer );
+		push @$buffer, $device->{identity}[$i];
 	}
-	push_value_as_two_7bit( $device->{crc}, $buffer );
+	push @$buffer, $device->{crc};
 }
 
 sub push_array_as_two_7bit {
@@ -855,6 +918,45 @@ sub push_array_as_two_7bit {
 		push_value_as_two_7bit( $byte, $buffer );
 		$byte = shift @$data;
 	}
+}
+
+sub pack_as_7bit {
+	my @data = @_;
+	my @outdata;
+	my $numBytes    = @data;
+	my $messageSize = ( $numBytes << 3 ) / 7;
+	for ( my $i = 0 ; $i < $messageSize ; $i++ ) {
+		my $j     = $i * 7;
+		my $pos   = $j >> 3;
+		my $shift = $j & 7;
+		my $out   = $data[$pos] >> $shift & 0x7F;
+		
+		if ($out >> 7 > 0) {
+			printf "%b, %b, %d\n",$data[$pos],$out,$shift;
+		}
+		
+		if ( $shift > 1 && $pos < $numBytes-1 ) {
+			$out |= ( $data[ $pos + 1 ] << ( 8 - $shift ) ) & 0x7F;
+		}
+		push( @outdata, $out );
+	}
+	return @outdata;
+}
+
+sub unpack_from_7bit {
+	my @data = @_;
+	my @outdata;
+	my $numBytes = @data;
+	my $outBytes = ( $numBytes * 7 ) >> 3;
+	for ( my $i = 0 ; $i < $outBytes ; $i++ ) {
+		my $j     = $i << 3;
+		my $pos   = $j / 7;
+		my $shift = $j % 7;
+		push( @outdata,
+			( $data[$pos] >> $shift ) |
+			  ( ( $data[ $pos + 1 ] << ( 7 - $shift ) ) & 0xFF ) );
+	}
+	return @outdata;
 }
 
 1;
