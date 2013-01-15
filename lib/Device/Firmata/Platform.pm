@@ -30,10 +30,15 @@ use Device::Firmata::Base
 	pins        => {},
 
 	# To notify on events
-	observer         => [],
-	digital_observer => [],
-	analog_observer  => [],
-	onewire_observer => [],
+	observer           => [],
+	digital_observer   => [],
+	analog_observer    => [],
+	sysex_observer     => [],
+	onewire_observer   => [],
+	scheduler_observer => undef,
+	
+	# To track scheduled tasks
+	tasks => [],
 
 	# For information about the device. eg: firmware version
 	metadata => {},
@@ -208,9 +213,20 @@ sub sysex_handle {
 		$sysex_message->{command_str} eq 'ONEWIRE_REPLY' and do {
 			my $pin      = $data->{pin};
 			my $observer = $self->{onewire_observer}[$pin];
-			&$observer( $pin, $data );
+			if (defined $observer) {
+				&$observer( $pin, $data );
+			}
+			last;
+		  };
+		  
+		$sysex_message->{command_str} eq 'SCHEDULER_REPLY' and do {
+			my $observer = $self->{scheduler_observer};
+			if (defined $observer) {
+				&$observer( $data );
+			}
 			last;
 		  }
+		  
 	}
 }
 
@@ -410,59 +426,161 @@ sub sampling_interval {
 	return $self->{io}->data_write($sampling_interval_packet);
 }
 
-sub onewire_config {
-	my ( $self, $pin, $power ) = @_;
-	my $onewire_packet =
-	  $self->{protocol}->packet_onewire_request( $pin, 'CONFIG', $power );
-	return $self->{io}->data_write($onewire_packet);
+sub scheduler_create_task {
+	my $self = shift;
+	my $id=-1;
+	my $tasks = $self->{tasks};
+	for my $task (@$tasks) {
+		if ($id < $task->{id}) {
+			$id = $task->{id};
+		}
+	}
+	$id++;
+	my $newtask = {
+		id => $id,
+		data => [],
+		time_ms => undef,
+	};
+	push @$tasks,$newtask;
+	return $id;
 }
 
-sub onewire_report_config {
-	my ( $self, $pin, $device, $config ) = @_;
-	my $onewire_packet =
-	  $self->{protocol}
-	  ->packet_onewire_request( $pin, 'REPORT_CONFIG', $device, $config );
-	return $self->{io}->data_write($onewire_packet);
+sub scheduler_delete_task {
+	my ($self,$id) = @_;
+	my $tasks = $self->{tasks};
+	for my $task (@$tasks) {
+		if ($id == $task->{id}) {
+			if (defined $task->{time_ms}) {
+				my $packet = $self->{protocol}->packet_delete_task($id);
+				$self->{io}->data_write($packet);
+			}
+			delete $self->{tasks}[$id]; # delete $array[index]; (not delete @array[index];)
+			last;
+		}
+	}
 }
+
+sub scheduler_add_to_task {
+	my ($self,$id,$packet) = @_;
+	my $tasks = $self->{tasks};
+	for my $task (@$tasks) {
+		if ($id == $task->{id}) {
+			my $data = $task->{data}; 
+			push @$data,unpack "C*", $packet;
+			last;
+		}
+	}
+}
+
+sub scheduler_schedule_task {
+	my ($self,$id,$time_ms) = @_;
+	my $tasks = $self->{tasks};
+	for my $task (@$tasks) {
+		if ($id == $task->{id}) {
+			if (!(defined $task->{time_ms})) { # TODO - a bit unclear why I put this test here in the first place. -> TODO: investigate and remove this check if not nessesary
+				my $data = $task->{data};
+				my $len = @$data;
+				my $packet = $self->{protocol}->packet_create_task($id,$len);
+				$self->{io}->data_write($packet);
+				my $bytesPerPacket = 53; # (64-1)*7/8-2 (1 byte command, 1 byte for subcommand, 1 byte taskid)
+				my $j=0;
+				my @packetdata;
+				for (my $i=0;$i<$len;$i++) {
+			    	push @packetdata,@$data[$i];
+			    	$j++;
+			    	if ($j==$bytesPerPacket) {
+			    		$j=0;
+				    	$packet = $self->{protocol}->packet_add_to_task($id,@packetdata);
+						$self->{io}->data_write($packet);
+						@packetdata = ();
+			    	}
+			    }
+			    if ($j>0) {
+			    	$packet = $self->{protocol}->packet_add_to_task($id,@packetdata);
+					$self->{io}->data_write($packet);
+			    }
+			}
+			my $packet = $self->{protocol}->packet_schedule_task($id,$time_ms);
+			$self->{io}->data_write($packet);
+			last;
+		}
+	}
+}
+
+sub scheduler_reset {
+	my $self = shift;
+	my $packet = $self->{protocol}->packet_reset_scheduler;
+	$self->{io}->data_write($packet);
+	$self->{tasks} = [];
+}
+
+sub scheduler_query_all_tasks {
+	my $self = shift;
+	my $packet = $self->{protocol}->packet_query_all_tasks;
+	$self->{io}->data_write($packet);
+}
+
+sub scheduler_query_task {
+	my ($self,$id) = @_;
+	my $packet = $self->{protocol}->packet_query_task($id);
+	$self->{io}->data_write($packet);
+}
+
+#	SEARCH_REQUEST,
+#	CONFIG_REQUEST,
+
+#$args = {
+#	reset => undef | 1,
+#	skip => undef | 1,
+#	select => undef | device,
+#	read => undef | short int,
+#	delay => undef | long int,
+#	write => undef | bytes[],
+#}
 
 sub onewire_search {
 	my ( $self, $pin ) = @_;
-	my $onewire_packet =
-	  $self->{protocol}->packet_onewire_request( $pin, 'SEARCH' );
+	my $onewire_packet = 
+	  $self->{protocol}->packet_onewire_search_request( $pin );
 	return $self->{io}->data_write($onewire_packet);
 }
 
-sub onewire_select_and_write {    #PIN,COMMAND,ADDRESS,DATA
-	my ( $self, $pin, $device, $data ) = @_;
+sub onewire_config {
+	my ( $self, $pin, $power ) = @_;
 	my $onewire_packet =
-	  $self->{protocol}
-	  ->packet_onewire_request( $pin, 'SELECT_AND_WRITE', $device, $data );
+	  $self->{protocol}->packet_onewire_config_request( $pin, $power );
 	return $self->{io}->data_write($onewire_packet);
 }
 
-sub onewire_select_and_read {     #PIN,COMMAND,ADDRESS,READCOMMAND,NUMBYTES
-	my ( $self, $pin, $device, $readcommand, $numbytes ) = @_;
-	my $onewire_packet =
-	  $self->{protocol}
-	  ->packet_onewire_request( $pin, 'SELECT_AND_READ', $device, $readcommand,
-		$numbytes );
-	return $self->{io}->data_write($onewire_packet);
+sub onewire_reset {
+	my ( $self, $pin ) = @_;
+	return $self->onewire_command_series( $pin, {reset => 1} );
 }
 
-sub onewire_skip_and_write {      #PIN,COMMAND,DATA
-	my ( $self, $pin, $data ) = @_;
-	my $onewire_packet =
-	  $self->{protocol}
-	  ->packet_onewire_request( $pin, 'SKIP_AND_WRITE', $data );
-	return $self->{io}->data_write($onewire_packet);
+sub onewire_skip {
+	my ( $self, $pin ) = @_;
+	return $self->onewire_command_series( $pin, {skip => 1} );
 }
 
-sub onewire_skip_and_read {       #PIN,COMMAND,READCOMMAND,NUMBYTES
-	my ( $self, $pin, $readcommand, $numbytes ) = @_;
-	my $onewire_packet =
-	  $self->{protocol}
-	  ->packet_onewire_request( $pin, 'SKIP_AND_READ', $readcommand,
-		$numbytes );
+sub onewire_select {
+	my ( $self, $pin, $device ) = @_;
+	return $self->onewire_command_series( $pin, {select => $device} );
+}
+
+sub onewire_read {
+	my ( $self, $pin, $numBytes ) = @_;
+	return $self->onewire_command_series( $pin, {read => $numBytes} );
+}
+
+sub onewire_write {
+	my ( $self, $pin, @data ) = @_;
+	return $self->onewire_command_series( $pin, {write => \@data} );
+}
+
+sub onewire_command_series {
+	my ( $self, $pin, $args ) = @_;
+	my $onewire_packet = 
+	  $self->{protocol}->packet_onewire_request( $pin, $args );
 	return $self->{io}->data_write($onewire_packet);
 }
 
@@ -497,6 +615,11 @@ sub observe_analog {
 sub observe_onewire {
 	my ( $self, $pin, $observer ) = @_;
 	$self->{onewire_observer}[$pin] = $observer;
+}
+
+sub observe_scheduler {
+	my ( $self, $observer ) = @_;
+	$self->{scheduler_observer} = $observer;
 }
 
 1;

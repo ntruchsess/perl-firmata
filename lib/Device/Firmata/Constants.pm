@@ -57,18 +57,16 @@ use constant (
 			END_SYSEX       => 0xF7,    # end a MIDI Sysex message
 
 			# extended command set using sysex (0-127/0x00-0x7F)
-			SERVO_CONFIG => 0x70,    # set max angle, minPulse, maxPulse, freq
-			STRING_DATA  => 0x71,    # a string message with 14-bits per char
-			SHIFT_DATA   => 0x75,    # a bitstream to/from a shift register
-			I2C_REQUEST  => 0x76,    # send an I2C read/write request
-			I2C_REPLY    => 0x77,    # a reply to an I2C read request
-			I2C_CONFIG =>
-			  0x78,    # config I2C settings such as delay times and power pins
-			REPORT_FIRMWARE   => 0x79, # report name and version of the firmware
-			SAMPLING_INTERVAL => 0x7A, # set the poll rate of the main loop
-			SYSEX_NON_REALTIME =>
-			  0x7E,                    # MIDI Reserved for non-realtime messages
-			SYSEX_REALTIME => 0x7F,    # MIDI Reserved for realtime messages
+			SERVO_CONFIG       => 0x70, # set max angle, minPulse, maxPulse, freq
+			STRING_DATA        => 0x71, # a string message with 14-bits per char
+			SHIFT_DATA         => 0x75, # a bitstream to/from a shift register
+			I2C_REQUEST        => 0x76, # send an I2C read/write request
+			I2C_REPLY          => 0x77, # a reply to an I2C read request
+			I2C_CONFIG         => 0x78, # config I2C settings such as delay times and power pins
+			REPORT_FIRMWARE    => 0x79, # report name and version of the firmware
+			SAMPLING_INTERVAL  => 0x7A, # set the poll rate of the main loop
+			SYSEX_NON_REALTIME => 0x7E, # MIDI Reserved for non-realtime messages
+			SYSEX_REALTIME     => 0x7F, # MIDI Reserved for realtime messages
 
 			# these are DEPRECATED to make the naming more consistent
 			FIRMATA_STRING          => 0x71,    # same as STRING_DATA
@@ -109,31 +107,24 @@ use constant (
 			END_SYSEX       => 0xF7,    # end a MIDI Sysex message
 
 			# extended command set using sysex (0-127/0x00-0x7F)
-			RESERVED_COMMAND => 0x00
-			, # 2nd SysEx data byte is a chip-specific command (AVR, PIC, TI, etc).
-			ANALOG_MAPPING_QUERY =>
-			  0x69,    # ask for mapping of analog to pin numbers
-			ANALOG_MAPPING_RESPONSE => 0x6A,    # reply with mapping info
-			CAPABILITY_QUERY =>
-			  0x6B,    # ask for supported modes and resolution of all pins
-			CAPABILITY_RESPONSE =>
-			  0x6C,    # reply with supported modes and resolution
-			PIN_STATE_QUERY => 0x6D,    # ask for a pin's current mode and value
-			PIN_STATE_RESPONSE =>
-			  0x6E,    # reply with a pin's current mode and value
-			EXTENDED_ANALOG => 0x6F, # analog write (PWM, Servo, etc) to any pin
-			SERVO_CONFIG    => 0x70, # set max angle, minPulse, maxPulse, freq
-			STRING_DATA     => 0x71, # a string message with 14-bits per char
-			SHIFT_DATA      => 0x75, # shiftOut config/data message (34 bits)
-			I2C_REQUEST     => 0x76, # send an I2C read/write request
-			I2C_REPLY       => 0x77, # a reply to an I2C read request
-			I2C_CONFIG =>
-			  0x78,    # config I2C settings such as delay times and power pins
-			REPORT_FIRMWARE   => 0x79, # report name and version of the firmware
-			SAMPLING_INTERVAL => 0x7A, # set the poll rate of the main loop
-			SYSEX_NON_REALTIME =>
-			  0x7E,                    # MIDI Reserved for non-realtime messages
-			SYSEX_REALTIME => 0x7F,    # MIDI Reserved for realtime messages
+			RESERVED_COMMAND        => 0x00, # 2nd SysEx data byte is a chip-specific command (AVR, PIC, TI, etc).
+			ANALOG_MAPPING_QUERY    => 0x69, # ask for mapping of analog to pin numbers
+			ANALOG_MAPPING_RESPONSE => 0x6A, # reply with mapping info
+			CAPABILITY_QUERY        => 0x6B, # ask for supported modes and resolution of all pins
+			CAPABILITY_RESPONSE     => 0x6C, # reply with supported modes and resolution
+			PIN_STATE_QUERY         => 0x6D, # ask for a pin's current mode and value
+			PIN_STATE_RESPONSE      => 0x6E, # reply with a pin's current mode and value
+			EXTENDED_ANALOG         => 0x6F, # analog write (PWM, Servo, etc) to any pin
+			SERVO_CONFIG            => 0x70, # set max angle, minPulse, maxPulse, freq
+			STRING_DATA             => 0x71, # a string message with 14-bits per char
+			SHIFT_DATA              => 0x75, # shiftOut config/data message (34 bits)
+			I2C_REQUEST             => 0x76, # send an I2C read/write request
+			I2C_REPLY               => 0x77, # a reply to an I2C read request
+			I2C_CONFIG              => 0x78, # config I2C settings such as delay times and power pins
+			REPORT_FIRMWARE         => 0x79, # report name and version of the firmware
+			SAMPLING_INTERVAL       => 0x7A, # set the poll rate of the main loop
+			SYSEX_NON_REALTIME      => 0x7E, # MIDI Reserved for non-realtime messages
+			SYSEX_REALTIME          => 0x7F, # MIDI Reserved for realtime messages
 
 			# pin modes
 			INPUT  => 0x00,            # digital pin in digitalOut mode
@@ -168,31 +159,24 @@ use constant (
 			END_SYSEX       => 0xF7,    # end a MIDI Sysex message
 
 			# extended command set using sysex (0-127/0x00-0x7F)
-			RESERVED_COMMAND => 0x00
-			, # 2nd SysEx data byte is a chip-specific command (AVR, PIC, TI, etc).
-			ANALOG_MAPPING_QUERY =>
-			  0x69,    # ask for mapping of analog to pin numbers
-			ANALOG_MAPPING_RESPONSE => 0x6A,    # reply with mapping info
-			CAPABILITY_QUERY =>
-			  0x6B,    # ask for supported modes and resolution of all pins
-			CAPABILITY_RESPONSE =>
-			  0x6C,    # reply with supported modes and resolution
-			PIN_STATE_QUERY => 0x6D,    # ask for a pin's current mode and value
-			PIN_STATE_RESPONSE =>
-			  0x6E,    # reply with a pin's current mode and value
-			EXTENDED_ANALOG => 0x6F, # analog write (PWM, Servo, etc) to any pin
-			SERVO_CONFIG    => 0x70, # set max angle, minPulse, maxPulse, freq
-			STRING_DATA     => 0x71, # a string message with 14-bits per char
-			SHIFT_DATA      => 0x75, # shiftOut config/data message (34 bits)
-			I2C_REQUEST     => 0x76, # send an I2C read/write request
-			I2C_REPLY       => 0x77, # a reply to an I2C read request
-			I2C_CONFIG =>
-			  0x78,    # config I2C settings such as delay times and power pins
-			REPORT_FIRMWARE   => 0x79, # report name and version of the firmware
-			SAMPLING_INTERVAL => 0x7A, # set the poll rate of the main loop
-			SYSEX_NON_REALTIME =>
-			  0x7E,                    # MIDI Reserved for non-realtime messages
-			SYSEX_REALTIME => 0x7F,    # MIDI Reserved for realtime messages
+			RESERVED_COMMAND        => 0x00, # 2nd SysEx data byte is a chip-specific command (AVR, PIC, TI, etc).
+			ANALOG_MAPPING_QUERY    => 0x69, # ask for mapping of analog to pin numbers
+			ANALOG_MAPPING_RESPONSE => 0x6A, # reply with mapping info
+			CAPABILITY_QUERY        => 0x6B, # ask for supported modes and resolution of all pins
+			CAPABILITY_RESPONSE     => 0x6C, # reply with supported modes and resolution
+			PIN_STATE_QUERY         => 0x6D, # ask for a pin's current mode and value
+			PIN_STATE_RESPONSE      => 0x6E, # reply with a pin's current mode and value
+			EXTENDED_ANALOG         => 0x6F, # analog write (PWM, Servo, etc) to any pin
+			SERVO_CONFIG            => 0x70, # set max angle, minPulse, maxPulse, freq
+			STRING_DATA             => 0x71, # a string message with 14-bits per char
+			SHIFT_DATA              => 0x75, # shiftOut config/data message (34 bits)
+			I2C_REQUEST             => 0x76, # send an I2C read/write request
+			I2C_REPLY               => 0x77, # a reply to an I2C read request
+			I2C_CONFIG              => 0x78, # config I2C settings such as delay times and power pins
+			REPORT_FIRMWARE         => 0x79, # report name and version of the firmware
+			SAMPLING_INTERVAL       => 0x7A, # set the poll rate of the main loop
+			SYSEX_NON_REALTIME      => 0x7E, # MIDI Reserved for non-realtime messages
+			SYSEX_REALTIME          => 0x7F, # MIDI Reserved for realtime messages
 
 			# pin modes
 			INPUT  => 0x00,            # digital pin in digitalOut mode
@@ -212,8 +196,7 @@ use constant (
 
 		V_2_04 => {
 
-			MAX_DATA_BYTES =>
-			  32,    # max number of data bytes in non-Sysex messages
+			MAX_DATA_BYTES => 64,    # max number of data bytes in non-Sysex messages
 
 			# message command bytes (128-255/0x80-0xFF)
 			DIGITAL_MESSAGE => 0x90,    # send data for a digital pin
@@ -227,33 +210,28 @@ use constant (
 			END_SYSEX       => 0xF7,    # end a MIDI Sysex message
 
 			# extended command set using sysex (0-127/0x00-0x7F)
-			RESERVED_COMMAND => 0x00
-			, # 2nd SysEx data byte is a chip-specific command (AVR, PIC, TI, etc).
-			ONEWIRE_REQUEST => 0x60,
-			ONEWIRE_REPLY   => 0x61,
-			ANALOG_MAPPING_QUERY =>
-			  0x69,    # ask for mapping of analog to pin numbers
-			ANALOG_MAPPING_RESPONSE => 0x6A,    # reply with mapping info
-			CAPABILITY_QUERY =>
-			  0x6B,    # ask for supported modes and resolution of all pins
-			CAPABILITY_RESPONSE =>
-			  0x6C,    # reply with supported modes and resolution
-			PIN_STATE_QUERY => 0x6D,    # ask for a pin's current mode and value
-			PIN_STATE_RESPONSE =>
-			  0x6E,    # reply with a pin's current mode and value
-			EXTENDED_ANALOG => 0x6F, # analog write (PWM, Servo, etc) to any pin
-			SERVO_CONFIG    => 0x70, # set max angle, minPulse, maxPulse, freq
-			STRING_DATA     => 0x71, # a string message with 14-bits per char
-			SHIFT_DATA      => 0x75, # shiftOut config/data message (34 bits)
-			I2C_REQUEST     => 0x76, # send an I2C read/write request
-			I2C_REPLY       => 0x77, # a reply to an I2C read request
-			I2C_CONFIG =>
-			  0x78,    # config I2C settings such as delay times and power pins
-			REPORT_FIRMWARE   => 0x79, # report name and version of the firmware
-			SAMPLING_INTERVAL => 0x7A, # set the poll rate of the main loop
-			SYSEX_NON_REALTIME =>
-			  0x7E,                    # MIDI Reserved for non-realtime messages
-			SYSEX_REALTIME => 0x7F,    # MIDI Reserved for realtime messages
+			RESERVED_COMMAND        => 0x00, # 2nd SysEx data byte is a chip-specific command (AVR, PIC, TI, etc).
+			ANALOG_MAPPING_QUERY    => 0x69, # ask for mapping of analog to pin numbers
+			ANALOG_MAPPING_RESPONSE => 0x6A, # reply with mapping info
+			CAPABILITY_QUERY        => 0x6B, # ask for supported modes and resolution of all pins
+			CAPABILITY_RESPONSE     => 0x6C, # reply with supported modes and resolution
+			PIN_STATE_QUERY         => 0x6D, # ask for a pin's current mode and value
+			PIN_STATE_RESPONSE      => 0x6E, # reply with a pin's current mode and value
+			EXTENDED_ANALOG         => 0x6F, # analog write (PWM, Servo, etc) to any pin
+			SERVO_CONFIG            => 0x70, # set max angle, minPulse, maxPulse, freq
+			STRING_DATA             => 0x71, # a string message with 14-bits per char
+			ONEWIRE_REQUEST         => 0x73, # send an OneWire read/write/reset/select/skip/search request
+			ONEWIRE_REPLY           => 0x7D, # reply to a OneWire read/search request
+			SHIFT_DATA              => 0x75, # shiftOut config/data message (34 bits)
+			I2C_REQUEST             => 0x76, # send an I2C read/write request
+			I2C_REPLY               => 0x77, # a reply to an I2C read request
+			I2C_CONFIG              => 0x78, # config I2C settings such as delay times and power pins
+			REPORT_FIRMWARE         => 0x79, # report name and version of the firmware
+			SAMPLING_INTERVAL       => 0x7A, # set the poll rate of the main loop
+			SCHEDULER_REQUEST       => 0x7B, # send a createtask/deletetask/addtotask/schedule/querytasks/querytask request to the scheduler
+			SCHEDULER_REPLY         => 0x7C, # a reply to a querytasks/querytask-request from the scheduler			
+			SYSEX_NON_REALTIME      => 0x7E, # MIDI Reserved for non-realtime messages
+			SYSEX_REALTIME          => 0x7F, # MIDI Reserved for realtime messages
 
 			# pin modes
 			INPUT   => 0x00,           # digital pin in digitalOut mode
