@@ -30,10 +30,10 @@ use Device::Firmata::Base
 	pins        => {},
 
 	# To notify on events
-	observer           => [],
 	digital_observer   => [],
 	analog_observer    => [],
-	sysex_observer     => [],
+	sysex_observer     => undef,
+	i2c_observer       => undef,
 	onewire_observer   => [],
 	scheduler_observer => undef,
 	
@@ -174,6 +174,10 @@ sub messages_handle {
 				my $sysex_data    = $self->{sysex_data};
 				my $sysex_message = $proto->sysex_parse($sysex_data);
 				if ( defined $sysex_message ) {
+					my $observer = $self->{sysex_observer};
+					if (defined $observer) {
+						&$observer ($sysex_message);
+					}
 					$self->sysex_handle($sysex_message);
 				}
 				$self->{sysex_data} = [];
@@ -202,11 +206,40 @@ sub sysex_handle {
 
 	my $data = $sysex_message->{data};
 
-  COMMAND_HANDLER: {
+	COMMAND_HANDLER: {
 		$sysex_message->{command_str} eq 'REPORT_FIRMWARE' and do {
 			$self->{metadata}{firmware_version} = sprintf "V_%i_%02i",
 			  $data->{major_version}, $data->{minor_version};
 			$self->{metadata}{firmware} = $data->{firmware};
+			last;
+		};
+		
+		$sysex_message->{command_str} eq 'CAPABILITY_RESPONSE' and do {
+			$self->{metadata}{capabilities} = $sysex_message->{pins};
+			last;
+		};
+		
+		$sysex_message->{command_str} eq 'ANALOG_MAPPING_RESPONSE' and do {
+			$self->{metadata}{analog_mappings} = $sysex_message->{pins};
+			last;
+		};
+		
+		$sysex_message->{command_str} eq 'PIN_STATE_RESPONSE' and do {
+			if (!defined $self->{metadata}{pinstates}) {
+				$self->{metadata}{pinstates} = {};
+			};
+			$self->{metadata}{pinstates}{ $sysex_message->{pin} } = {
+				mode  => $sysex_message->{mode},
+				state => $sysex_message->{state},
+			};
+			last;
+		};
+
+		$sysex_message->{command_str} eq 'I2C_REPLY' and do {
+			my $observer = $self->{i2c_observer};
+			if (defined $observer) {
+				&$observer( $data );
+			}
 			last;
 		};
 
@@ -214,10 +247,10 @@ sub sysex_handle {
 			my $pin      = $data->{pin};
 			my $observer = $self->{onewire_observer}[$pin];
 			if (defined $observer) {
-				&$observer( $pin, $data );
+				&$observer( $data );
 			}
 			last;
-		  };
+		};
 		  
 		$sysex_message->{command_str} eq 'SCHEDULER_REPLY' and do {
 			my $observer = $self->{scheduler_observer};
@@ -225,8 +258,7 @@ sub sysex_handle {
 				&$observer( $data );
 			}
 			last;
-		  }
-		  
+		};
 	}
 }
 
@@ -302,12 +334,6 @@ sub pin_mode {
 		return $self->{io}->data_write($mode_packet);
 	};
 
-	$mode == PIN_PWM and do {
-		my $mode_packet =
-		  $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
-		return $self->{io}->data_write($mode_packet);
-	};
-
 	$mode == PIN_ANALOG and do {
 		my $port_number = $pin >> 3;
 		my $mode_packet =
@@ -320,12 +346,11 @@ sub pin_mode {
 		return $self->{io}->data_write($mode_packet);
 	};
 
-	$mode == PIN_ONEWIRE and do {
+	( $mode == PIN_PWM || $mode == PIN_I2C || $mode == PIN_ONEWIRE ) and do {
 		my $mode_packet =
 		  $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
 		return $self->{io}->data_write($mode_packet);
 	};
-
 }
 
 =head2 digital_write
@@ -437,11 +462,45 @@ sub analog_mapping_query {
 	return $self->{io}->data_write($analog_mapping_query_packet);
 }
 
+sub pin_state_query {
+	my ($self,$pin) = @_;
+	my $pin_state_query_packet = $self->{protocol}->packet_query_pin_state($pin);
+	return $self->{io}->data_write($pin_state_query_packet);
+}
+
 sub sampling_interval {
 	my ( $self, $sampling_interval ) = @_;
 	my $sampling_interval_packet =
 	  $self->{protocol}->packet_sampling_interval($sampling_interval);
 	return $self->{io}->data_write($sampling_interval_packet);
+}
+
+sub i2c_write {
+	my ($self,$address,@data) = @_;
+	return $self->{io}->data_write($self->{protocol}->packet_i2c_request($address,0x0,@data));
+}
+
+sub i2c_readonce {
+	my ($self,$address,$register,$numbytes) = @_;
+	my $packet = (defined $numbytes) 
+		? $self->{protocol}->packet_i2c_request($address,0x8,$register,$numbytes)
+		: $self->{protocol}->packet_i2c_request($address,0x8,$register);
+	return $self->{io}->data_write($packet);
+}
+
+sub i2c_read {
+	my ($self,$address,$register,$numbytes) = @_;
+	return $self->{io}->data_write($self->{protocol}->packet_i2c_request($address,0x10,$register,$numbytes));
+}
+
+sub i2c_stopreading {
+	my ($self,$address) = @_;
+	return $self->{io}->data_write($self->{protocol}->packet_i2c_request($address,0x18));
+}
+
+sub i2c_config {
+	my ( $self, $delay, @data ) = @_;
+	return $self->{io}->data_write($self->{protocol}->packet_i2c_config($delay,@data));
 }
 
 sub scheduler_create_task {
@@ -628,6 +687,16 @@ sub observe_digital {
 sub observe_analog {
 	my ( $self, $pin, $observer ) = @_;
 	$self->{analog_observer}[$pin] = $observer;
+}
+
+sub observe_sysex {
+	my ( $self, $observer ) = @_;
+	$self->{sysex_observer} = $observer;
+}
+
+sub observe_i2c {
+	my ( $self, $observer ) = @_;
+	$self->{i2c_observer} = $observer;
 }
 
 sub observe_onewire {
