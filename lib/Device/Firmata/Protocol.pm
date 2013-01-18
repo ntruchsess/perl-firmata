@@ -564,9 +564,9 @@ sub packet_i2c_request {
 		$command |= (0x20 | (($address >> 7) & 0x7));
 	}  
 
-	if (@i2cdata) {
+	if (scalar @i2cdata) {
 		my @data;
-		push_array_as_two_7bit(\@data,\@i2cdata);	
+		push_array_as_two_7bit(\@i2cdata,\@data);	
 		return $self->packet_sysex_command( I2C_REQUEST,
 			$address & 0x7f,
 			$command,
@@ -598,10 +598,13 @@ sub handle_i2c_reply {
 
 	my ( $self, $sysex_data ) = @_;
 
+	my $address = shift14bit($sysex_data);
+	my $register = shift14bit($sysex_data);
+	my @data = double_7bit_to_array($sysex_data);
 	return {
-		slave_address => shift14bit $sysex_data,
-		register      => shift14bit $sysex_data,
-		data          => \double_7bit_to_array($sysex_data),
+		address       => $address,
+		register      => $register,
+		data          => \@data,
 	};
 }
 

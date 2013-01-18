@@ -481,13 +481,16 @@ sub i2c_write {
 }
 
 sub i2c_readonce {
-	my ($self,$address) = @_;
-	return $self->{io}->data_write($self->{protocol}->packet_i2c_request($address,0x8));
+	my ($self,$address,$register,$numbytes) = @_;
+	my $packet = (defined $numbytes) 
+		? $self->{protocol}->packet_i2c_request($address,0x8,$register,$numbytes)
+		: $self->{protocol}->packet_i2c_request($address,0x8,$register);
+	return $self->{io}->data_write($packet);
 }
 
 sub i2c_read {
-	my ($self,$address) = @_;
-	return $self->{io}->data_write($self->{protocol}->packet_i2c_request($address,0x10));
+	my ($self,$address,$register,$numbytes) = @_;
+	return $self->{io}->data_write($self->{protocol}->packet_i2c_request($address,0x10,$register,$numbytes));
 }
 
 sub i2c_stopreading {
