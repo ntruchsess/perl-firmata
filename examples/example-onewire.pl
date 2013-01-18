@@ -7,14 +7,16 @@ use Device::Firmata::Constants qw/ :all /;
 use Device::Firmata;
 $|++;
 
-$Device::Firmata::DEBUG = 1;
+$Device::Firmata::DEBUG = 0;
 
 our $ow_devices;
 
-my $pin = 10;
+my $pin = 10; #connect DS18B20 to pin 10
 
 my $device = Device::Firmata->open('/dev/ttyUSB0')
   or die "Could not connect to Firmata Server";
+
+$device->firmware_version_query();
 
 for ( my $j = 0 ; $j < 20 ; $j++ ) {
 	sleep 0.1;
@@ -24,18 +26,8 @@ for ( my $j = 0 ; $j < 20 ; $j++ ) {
 print "Firmware: " . $device->{metadata}{firmware} . "\n";
 print "Version: " . $device->{metadata}{firmware_version} . "\n";
 
-for ( my $j = 0 ; $j < 20 ; $j++ ) {
-	sleep 0.2;
-	$device->poll();
-}
-
 $device->observe_onewire( $pin, \&onOneWireMessage );
 $device->observe_scheduler( \&onSchedulerMessage );
-
-#while (1) {
-#	$device->poll();
-#	sleep 0.1;
-#}
 
 $device->pin_mode( $pin, PIN_ONEWIRE );
 
@@ -46,41 +38,8 @@ while ( ( not defined $ow_devices ) or ( @$ow_devices < 2 ) ) {
 	sleep 1;
 }
 
-#while (1) {
-#for ( my $i = 0 ; $i < @$ow_devices ; $i++ ) {
-#	$device->onewire_reset($pin);
-#	$device->onewire_select( $pin, @$ow_devices[$i] );
-#	$device->onewire_write( $pin, 0x44 );
-#}
-#
-#sleep 1;
-#
-#for ( my $i = 0 ; $i < @$ow_devices ; $i++ ) {
-#	$device->onewire_reset($pin);
-#	$device->onewire_select( $pin, @$ow_devices[$i] );
-#	$device->onewire_write( $pin, 0xBE );
-#	$device->onewire_read( $pin, 9 );
-#}
-#
-#for ( my $i = 0 ; $i < 5 ; $i++ ) {
-#	sleep 1;
-#	$device->poll;
-#}
-#}
-
-#print ("now using scheduling\n");
-
 $device->scheduler_reset();
 my $taskid0 = $device->scheduler_create_task();
-
-#$args = {
-#	reset => undef | 1,
-#	skip => undef | 1,
-#	select => undef | device,
-#	read => undef | short int,
-#	delay => undef | long int,
-#	write => undef | bytes[],
-#}
 
 $device->scheduler_add_to_task( $taskid0,
 	$device->{protocol}->packet_onewire_request($pin , {
@@ -119,18 +78,21 @@ $device->scheduler_add_to_task( $taskid1,
 print "schedule taskid: ".$taskid1."\n";
 $device->scheduler_schedule_task( $taskid1, 0 );
 
+$device->scheduler_query_all_tasks();
+$device->scheduler_query_task($taskid0);
+$device->scheduler_query_task($taskid1);
+
 while (1) {
 	for (my $i=0;$i<50;$i++) {
 		$device->poll();
 		select(undef,undef,undef,0.1);
 	}
-	$device->scheduler_query_all_tasks();
-	$device->scheduler_query_task($taskid0);
-	$device->scheduler_query_task($taskid1);
 }
 
 sub onOneWireMessage {
-	my ( $pin, $data ) = @_;
+	my $data = shift;
+	
+	my $pin = $data->{pin};
 
 	print(  "onOneWireMessage for pin " 
 		  . $pin
