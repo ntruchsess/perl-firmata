@@ -70,14 +70,14 @@ our $SCHEDULER_COMMANDS = {
 };
 
 our $MODENAMES = {
-	0 => 'PIN_INPUT',
-	1 => 'PIN_OUTPUT',
-	2 => 'PIN_ANALOG',
-	3 => 'PIN_PWM',
-	4 => 'PIN_SERVO',
-	5 => 'PIN_SHIFT',
-	6 => 'PIN_I2C',
-	7 => 'PIN_ONEWIRE',
+	0 => 'INPUT',
+	1 => 'OUTPUT',
+	2 => 'ANALOG',
+	3 => 'PWM',
+	4 => 'SERVO',
+	5 => 'SHIFT',
+	6 => 'I2C',
+	7 => 'ONEWIRE',
 };
 
 =head1 DESCRIPTION
@@ -427,6 +427,7 @@ sub handle_capability_response {
 		while ( defined $firstbyte && $firstbyte != 127 ) {
 			my $pinmode = {
 				mode       => $firstbyte,
+				mode_str   => $MODENAMES->{$firstbyte},
 				resolution => shift @$sysex_data    # /secondbyte
 			};
 			push @pinmodes, $pinmode;
@@ -520,9 +521,10 @@ sub handle_pin_state_response {
 	}
 
 	return {
-		pin   => $pin,
-		mode  => $MODENAMES->{$mode},
-		state => $state
+		pin       => $pin,
+		mode      => $mode,
+		moden_str => $MODENAMES->{$mode},
+		state     => $state
 	};
 
 }
