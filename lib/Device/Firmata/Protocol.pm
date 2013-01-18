@@ -69,6 +69,17 @@ our $SCHEDULER_COMMANDS = {
 	QUERY_TASK_REPLY        => 10,
 };
 
+our $MODENAMES = {
+	0 => 'PIN_INPUT',
+	1 => 'PIN_OUTPUT',
+	2 => 'PIN_ANALOG',
+	3 => 'PIN_PWM',
+	4 => 'PIN_SERVO',
+	5 => 'PIN_SHIFT',
+	6 => 'PIN_I2C',
+	7 => 'PIN_ONEWIRE',
+};
+
 =head1 DESCRIPTION
 
 Because we're dealing with a permutation of the
@@ -268,6 +279,11 @@ sub sysex_parse {
 				$return_data = $self->handle_pin_state_response($sysex_data);
 				last;
 			};
+			
+			$command == $protocol_commands->{I2C_REPLY} and do {
+				$return_data = $self->handle_i2c_reply($sysex_data);
+				last;
+			};
 
 			$command == $protocol_commands->{ONEWIRE_REPLY} and do {
 				$return_data = $self->handle_onewire_reply($sysex_data);
@@ -401,10 +417,10 @@ sub handle_capability_response {
 
 	my ( $self, $sysex_data ) = @_;
 
-	my @pins;
+	my %pins;
 
 	my $firstbyte = shift @$sysex_data;
-
+	my $i=0;
 	while ( defined $firstbyte ) {
 
 		my @pinmodes;
@@ -416,11 +432,12 @@ sub handle_capability_response {
 			push @pinmodes, $pinmode;
 			$firstbyte = shift @$sysex_data;
 		}
-		push @pins, \@pinmodes;
+		$pins{$i}=\@pinmodes;
+		$i++;
 		$firstbyte = shift @$sysex_data;
 	}
 
-	return { pins => \@pins };
+	return { pins => \%pins };
 
 }
 
@@ -446,17 +463,19 @@ sub handle_analog_mapping_response {
 
 	my ( $self, $sysex_data ) = @_;
 
-	# my @pins;
+	my %pins;
+	my $pin_mapping = shift @$sysex_data;
+	my $i=0;
+	
+	while ( defined $pin_mapping ) {
+		if ($pin_mapping!=127) {
+			$pins{$i}=$pin_mapping;
+		}
+		$pin_mapping = shift @$sysex_data;
+		$i++;
+	}
 
-	# my $pin_mapping = shift @$sysex_data;
-
-	# while ( defined $pin_mapping ) {
-	#	push @pins, $pin_mapping;
-	# }
-
-	# return { pins => \@pins };
-	return { pins => $sysex_data }; # FIXME how to handle this?
-
+	return { pins => \%pins };
 }
 
 #/* pin state query
@@ -502,7 +521,7 @@ sub handle_pin_state_response {
 
 	return {
 		pin   => $pin,
-		mode  => $mode,
+		mode  => $MODENAMES->{$mode},
 		state => $state
 	};
 
@@ -537,6 +556,26 @@ sub packet_sampling_interval {
 
 sub packet_i2c_request {
 
+	my ( $self, $address, $command, @i2cdata ) = @_;
+
+	if (($address & 0x380) > 0) {
+		$command |= (0x20 | (($address >> 7) & 0x7));
+	}  
+
+	if (@i2cdata) {
+		my @data;
+		push_array_as_two_7bit(\@data,\@i2cdata);	
+		return $self->packet_sysex_command( I2C_REQUEST,
+			$address & 0x7f,
+			$command,
+			@data,
+		);
+	} else {
+		return $self->packet_sysex_command( I2C_REQUEST,
+			$address & 0x7f,
+			$command,
+		);
+	}
 }
 
 #/* I2C reply
@@ -557,23 +596,10 @@ sub handle_i2c_reply {
 
 	my ( $self, $sysex_data ) = @_;
 
-	my $slave_address =
-	  ( shift @$sysex_data & 0x7f ) + ( shift @$sysex_data << 7 );
-	my $register = ( shift @$sysex_data & 0x7f ) + ( shift @$sysex_data << 7 );
-
-	my @data;
-
-	my $lsb = shift @$sysex_data;
-	while ( defined $lsb ) {
-		my $msb = shift @$sysex_data;
-		push @data, ( $lsb & 0x7f + ( $msb << 7 ) & 0x7f );
-		$lsb = shift @$sysex_data;
-	}
-
 	return {
-		slave_address => $slave_address,
-		register      => $register,
-		data          => \@data,
+		slave_address => shift14bit $sysex_data,
+		register      => shift14bit $sysex_data,
+		data          => \double_7bit_to_array($sysex_data),
 	};
 }
 
@@ -589,14 +615,11 @@ sub handle_i2c_reply {
 
 sub packet_i2c_config {
 
-	my ( $self, $data ) = @_;
-
-	my $delay  = $data->{delay};
-	my @custom = $data->{custom_data};
+	my ( $self, $delay, @data ) = @_;
 
 	return $self->packet_sysex_command( I2C_CONFIG,
 		$delay & 0x7f,
-		$delay >> 7, @custom
+		$delay >> 7, @data
 	);
 }
 
