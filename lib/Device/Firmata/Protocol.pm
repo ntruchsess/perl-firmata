@@ -470,13 +470,13 @@ sub handle_analog_mapping_response {
 	
 	while ( defined $pin_mapping ) {
 		if ($pin_mapping!=127) {
-			$pins{$i}=$pin_mapping;
+			$pins{$pin_mapping}=$i;
 		}
 		$pin_mapping = shift @$sysex_data;
 		$i++;
 	}
 
-	return { pins => \%pins };
+	return { mappings => \%pins };
 }
 
 #/* pin state query

@@ -109,7 +109,7 @@ sub messages_handle {
 		my $data    = $message->{data};
 
 	  COMMAND_HANDLE: {
-
+#* digital I/O message   0x90   port       LSB(bits 0-6)         MSB(bits 7-13)
 			# Handle pin messages
 			$command eq 'DIGITAL_MESSAGE' and do {
 				my $port_number = $message->{command} & 0x0f;
@@ -125,14 +125,15 @@ sub messages_handle {
 					if ($observer) {
 						my $pin_mask = 1 << $i;
 						if ( $changed_state & $pin_mask ) {
-							&$observer(
+							$observer->{method}(
 								$pin,
 								defined $old_state
 								? ( $old_state & $pin_mask ) > 0
 									  ? 1
 									  : 0
 								: undef,
-								( $port_state & $pin_mask ) > 0 ? 1 : 0
+								( $port_state & $pin_mask ) > 0 ? 1 : 0,
+								$observer->{context}
 							);
 						}
 					}
@@ -144,11 +145,14 @@ sub messages_handle {
 			$command eq 'ANALOG_MESSAGE' and do {
 				my $pin_number = $message->{command} & 0x0f;
 				my $pin_value  = ( $data->[0] | ( $data->[1] << 7 ) ) / 1023;
+				if (defined $self->{metadata}{analog_mappings}) {
+					$pin_number = $self->{metadata}{analog_mappings}{$pin_number};
+				}				
 				my $observer   = $self->{analog_observer}[$pin_number];
 				if ($observer) {
 					my $old_value = $self->{analog_pins}[$pin_number];
-					if ( !defined $old_value or $old_value != $pin_value ) {
-						&$observer( $pin_number, $old_value, $pin_value );
+					if ( !defined $old_value or !($old_value eq $pin_value) ) {
+						$observer->{method}( $pin_number, $old_value, $pin_value, $observer->{context} );
 					}
 				}
 				$self->{analog_pins}[$pin_number] = $pin_value;
@@ -176,7 +180,7 @@ sub messages_handle {
 				if ( defined $sysex_message ) {
 					my $observer = $self->{sysex_observer};
 					if (defined $observer) {
-						&$observer ($sysex_message);
+						$observer->{method} ($sysex_message, $observer->{context});
 					}
 					$self->sysex_handle($sysex_message);
 				}
@@ -215,12 +219,12 @@ sub sysex_handle {
 		};
 		
 		$sysex_message->{command_str} eq 'CAPABILITY_RESPONSE' and do {
-			$self->{metadata}{capabilities} = $sysex_message->{pins};
+			$self->{metadata}{capabilities} = $data->{pins};
 			last;
 		};
 		
 		$sysex_message->{command_str} eq 'ANALOG_MAPPING_RESPONSE' and do {
-			$self->{metadata}{analog_mappings} = $sysex_message->{pins};
+			$self->{metadata}{analog_mappings} = $data->{mappings};
 			last;
 		};
 		
@@ -228,9 +232,9 @@ sub sysex_handle {
 			if (!defined $self->{metadata}{pinstates}) {
 				$self->{metadata}{pinstates} = {};
 			};
-			$self->{metadata}{pinstates}{ $sysex_message->{pin} } = {
-				mode  => $sysex_message->{mode},
-				state => $sysex_message->{state},
+			$self->{metadata}{pinstates}{ $data->{pin} } = {
+				mode  => $data->{mode},
+				state => $data->{state},
 			};
 			last;
 		};
@@ -238,7 +242,7 @@ sub sysex_handle {
 		$sysex_message->{command_str} eq 'I2C_REPLY' and do {
 			my $observer = $self->{i2c_observer};
 			if (defined $observer) {
-				&$observer( $data );
+				$observer->{method}( $data, $observer->{context} );
 			}
 			last;
 		};
@@ -247,7 +251,7 @@ sub sysex_handle {
 			my $pin      = $data->{pin};
 			my $observer = $self->{onewire_observer}[$pin];
 			if (defined $observer) {
-				&$observer( $data );
+				$observer->{method}( $data, $observer->{context} );
 			}
 			last;
 		};
@@ -255,7 +259,7 @@ sub sysex_handle {
 		$sysex_message->{command_str} eq 'SCHEDULER_REPLY' and do {
 			my $observer = $self->{scheduler_observer};
 			if (defined $observer) {
-				&$observer( $data );
+				$observer->{method}( $data, $observer->{context} );
 			}
 			last;
 		};
@@ -291,8 +295,8 @@ sub probe {
 		if ( $query_tics <= time ) {
 
 			# Query the device for information on the firmata firmware_version
-			my $query_packet = $proto->packet_query_firmware;
-			$io->data_write($query_packet) or die "OOPS: $!";
+			$self->firmware_version_query();
+			$self->analog_mapping_query();
 			$query_tics = time + 0.5;
 		}
 
@@ -680,33 +684,51 @@ sub poll {
 }
 
 sub observe_digital {
-	my ( $self, $pin, $observer ) = @_;
-	$self->{digital_observer}[$pin] = $observer;
+	my ( $self, $pin, $observer, $context ) = @_;
+	$self->{digital_observer}[$pin] = {
+		method  => $observer,
+		context => $context,	
+	};
 }
 
 sub observe_analog {
-	my ( $self, $pin, $observer ) = @_;
-	$self->{analog_observer}[$pin] = $observer;
+	my ( $self, $pin, $observer, $context ) = @_;
+	$self->{analog_observer}[$pin] =  {
+		method  => $observer,
+		context => $context,	
+	};
 }
 
 sub observe_sysex {
-	my ( $self, $observer ) = @_;
-	$self->{sysex_observer} = $observer;
+	my ( $self, $observer, $context ) = @_;
+	$self->{sysex_observer} = {
+		method  => $observer,
+		context => $context,	
+	};
 }
 
 sub observe_i2c {
-	my ( $self, $observer ) = @_;
-	$self->{i2c_observer} = $observer;
+	my ( $self, $observer, $context ) = @_;
+	$self->{i2c_observer} =  {
+		method  => $observer,
+		context => $context,	
+	};
 }
 
 sub observe_onewire {
-	my ( $self, $pin, $observer ) = @_;
-	$self->{onewire_observer}[$pin] = $observer;
+	my ( $self, $pin, $observer, $context ) = @_;
+	$self->{onewire_observer}[$pin] =  {
+		method  => $observer,
+		context => $context,	
+	};
 }
 
 sub observe_scheduler {
-	my ( $self, $observer ) = @_;
-	$self->{scheduler_observer} = $observer;
+	my ( $self, $observer, $context ) = @_;
+	$self->{scheduler_observer} = {
+		method  => $observer,
+		context => $context,	
+	};
 }
 
 1;
