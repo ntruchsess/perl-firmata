@@ -40,6 +40,7 @@ $MIDI_DATA_SIZES = {
 	# Special for version queries
 	0xF4 => 2,
 	0xF9 => 2,
+	0xFF => 0,
 };
 
 our $ONE_WIRE_COMMANDS = {

@@ -10,6 +10,8 @@ $|++;
 $Device::Firmata::DEBUG = 1;
 
 my $device = Device::Firmata->open('/dev/ttyUSB0') or die "Could not connect to Firmata Server";
+$device->system_reset();
+$device->probe();
 
 # die Dumper $device;
 
@@ -29,7 +31,6 @@ while (1) {
     $device->poll;
     my $strobe_state = $iteration++%2;
     $device->digital_write(11,$strobe_state);
-    print $device->digital_read(11)."\n";
     print $device->digital_read(12)."\n";
     select undef,undef,undef,0.5;
 }

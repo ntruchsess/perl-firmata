@@ -20,8 +20,8 @@ use Device::Firmata::Base
 	protocol => undef,
 
 	# Used for internal tracking of events/parameters
-	protocol_version => undef,
-	sysex_mode       => undef,
+	#protocol_version => undef,
+	#sysex_mode       => undef,
 	sysex_data       => [],
 
 	# To track internal status
@@ -85,6 +85,24 @@ sub detach {
 	my $self = shift;
 
 	delete $self->{io};
+}
+
+sub system_reset {
+	my $self = shift;
+	$self->{io}->data_write($self->{protocol}->message_prepare( SYSTEM_RESET => 0 ));
+	$self->{sysex_data}         = [];
+	$self->{analog_pins}        = [];
+	$self->{ports}              = [];
+	$self->{pins}               = {};
+	$self->{pin_modes}          = {};
+	$self->{digital_observer}   = [];
+	$self->{analog_observer}    = [];
+	$self->{sysex_observer}     = undef;
+	$self->{i2c_observer}       = undef;
+	$self->{onewire_observer}   = [];
+	$self->{scheduler_observer} = undef;
+	$self->{tasks}              = [];
+	$self->{metadata}           = {};
 }
 
 =head2 messages_handle
@@ -327,28 +345,29 @@ sub probe {
 
 			# Query the device for information on the firmata firmware_version
 			$self->firmware_version_query();
+			select (undef,undef,undef,0.1);
+
+			# Try to get a response
+			$self->poll;
+
+			if (   $self->{metadata}{firmware}
+				&& $self->{metadata}{firmware_version} )
+			{
+				$self->{protocol}->{protocol_version} =	$self->{metadata}{firmware_version};
+
+				$self->analog_mapping_query();
+				$self->capability_query();
+				while ($end_tics >= time) {
+					if (($self->{metadata}{analog_mappings}) and ($self->{metadata}{capabilities})) {
+						return 1;
+					}
+					$self->poll();
+				}
+				return 1;
+			}
 			$query_tics = time + 0.5;
 		}
-
-		# Try to get a response
-		$self->poll;
-
-		if (   $self->{metadata}{firmware}
-			&& $self->{metadata}{firmware_version} )
-		{
-			$self->{protocol}->{protocol_version} =
-			  $self->{metadata}{firmware_version};
-
-			$self->analog_mapping_query();
-			$self->capability_query();
-			while ($end_tics >= time) {
-				if (($self->{metadata}{analog_mappings}) and ($self->{metadata}{capabilities})) {
-					return 1;
-				}
-				$self->poll();
-			}
-			return 1;
-		}
+		select (undef,undef,undef,0.1);
 	}
 	return undef;
 }
