@@ -7,37 +7,35 @@ use Device::Firmata::Constants qw/ :all /;
 use Device::Firmata;
 $|++;
 
+$Device::Firmata::DEBUG = 1;
+
 my $device = Device::Firmata->open('/dev/ttyUSB0') or die "Could not connect to Firmata Server";
 
-$device->probe;
+# die Dumper $device;
 
-die Dumper $device;
+$device->observe_digital(12,\&onDigitalMessage,"context");
 
-#$device->pin_mode(13=>PIN_OUTPUT);
-
-# Set the pull high value
-#$device->pin_mode(12=>PIN_OUTPUT);
-#$device->digital_write(12=>1);
+# Set pin to output
+$device->pin_mode(11,PIN_OUTPUT);
 
 # Set pin to input
-#$device->pin_mode(12=>PIN_INPUT);
-
-# Set PWM pin
-#$device->pin_mode(3=>PIN_PWM);
-
-# Set Analog pin
-$device->pin_mode(1=>PIN_ANALOG);
+$device->pin_mode(12,PIN_INPUT);
+$device->pin_mode(15,PIN_ANALOG);
+$device->sampling_interval(500);
 
 my $iteration = 0;
 
-#$Device::Firmata::DEBUG = 1;
-
 while (1) {
     $device->poll;
-    print $device->analog_read(1)."\n";
-#    my $strobe_state = $iteration++%2;
-#    $device->digital_write(13=>$strobe_state);
-#    $device->analog_write(3=>( $iteration % 256 ) );
-    select undef,undef,undef,0.01;
+    my $strobe_state = $iteration++%2;
+    $device->digital_write(11,$strobe_state);
+    print $device->digital_read(11)."\n";
+    print $device->digital_read(12)."\n";
+    select undef,undef,undef,0.5;
 }
 
+sub onDigitalMessage
+{
+	my ($pin,$old,$new,$hash) = @_;
+	print ("onDigitalMessage for pin ".$pin.", old: ".(defined $old ? $old : "--").", new: ".(defined $new ? $new : "--").", context: ".$hash."\n");
+}

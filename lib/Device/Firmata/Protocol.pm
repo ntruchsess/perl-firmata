@@ -417,28 +417,26 @@ sub handle_capability_response {
 
 	my ( $self, $sysex_data ) = @_;
 
-	my %pins;
+	my %capabilities;
 
-	my $firstbyte = shift @$sysex_data;
+	my $byte = shift @$sysex_data;
 	my $i=0;
-	while ( defined $firstbyte ) {
+	while ( defined $byte ) {
 
-		my @pinmodes;
-		while ( defined $firstbyte && $firstbyte != 127 ) {
-			my $pinmode = {
-				mode       => $firstbyte,
-				mode_str   => $MODENAMES->{$firstbyte},
+		my %pinmodes;
+		while ( defined $byte && $byte != 127 ) {
+			$pinmodes{$byte} = {
+				mode_str   => $MODENAMES->{$byte},
 				resolution => shift @$sysex_data    # /secondbyte
-			};
-			push @pinmodes, $pinmode;
-			$firstbyte = shift @$sysex_data;
+			}; 
+			$byte = shift @$sysex_data;
 		}
-		$pins{$i}=\@pinmodes;
+		$capabilities{$i}=\%pinmodes;
 		$i++;
-		$firstbyte = shift @$sysex_data;
+		$byte = shift @$sysex_data;
 	}
 
-	return { pins => \%pins };
+	return { capabilities => \%capabilities };
 
 }
 

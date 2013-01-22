@@ -25,9 +25,10 @@ use Device::Firmata::Base
 	sysex_data       => [],
 
 	# To track internal status
-	ports       => [],
 	analog_pins => [],
+	ports       => [],
 	pins        => {},
+	pin_modes   => {},
 
 	# To notify on events
 	digital_observer   => [],
@@ -219,7 +220,37 @@ sub sysex_handle {
 		};
 		
 		$sysex_message->{command_str} eq 'CAPABILITY_RESPONSE' and do {
-			$self->{metadata}{capabilities} = $data->{pins};
+			my $capabilities = $data->{capabilities};
+			$self->{metadata}{capabilities} = $capabilities;
+			my @analogpins;
+			my @inputpins;
+			my @outputpins;
+			my @i2cpins;
+			my @onewirepins;
+			foreach my $pin (keys %$capabilities) {
+				if (defined $capabilities->{$pin}) {
+					if ($capabilities->{$pin}->{PIN_INPUT+0}) {
+						push @inputpins, $pin;
+						if ($capabilities->{$pin}->{PIN_OUTPUT+0}) {
+							push @onewirepins, $pin;
+						}
+					}
+					if ($capabilities->{$pin}->{PIN_OUTPUT+0}) {
+						push @outputpins, $pin;
+					}
+					if ($capabilities->{$pin}->{PIN_ANALOG+0}) {
+						push @analogpins, $pin;
+					}
+					if ($capabilities->{$pin}->{PIN_I2C+0}) {
+						push @i2cpins, $pin;
+					}
+				}
+			}
+			$self->{metadata}{input_pins}   = \@inputpins;
+			$self->{metadata}{output_pins}  = \@outputpins;
+			$self->{metadata}{analog_pins}  = \@analogpins;
+			$self->{metadata}{i2c_pins}     = \@i2cpins;
+			$self->{metadata}{onewire_pins} = \@onewirepins;
 			last;
 		};
 		
@@ -296,7 +327,6 @@ sub probe {
 
 			# Query the device for information on the firmata firmware_version
 			$self->firmware_version_query();
-			$self->analog_mapping_query();
 			$query_tics = time + 0.5;
 		}
 
@@ -308,6 +338,15 @@ sub probe {
 		{
 			$self->{protocol}->{protocol_version} =
 			  $self->{metadata}{firmware_version};
+
+			$self->analog_mapping_query();
+			$self->capability_query();
+			while ($end_tics >= time) {
+				if (($self->{metadata}{analog_mappings}) and ($self->{metadata}{capabilities})) {
+					return 1;
+				}
+				$self->poll();
+			}
 			return 1;
 		}
 	}
@@ -322,39 +361,35 @@ arduino
 =cut
 
 sub pin_mode {
-
+	
 	# --------------------------------------------------
 	my ( $self, $pin, $mode ) = @_;
 
-	( $mode == PIN_INPUT or $mode == PIN_OUTPUT ) and do {
-		my $port_number = $pin >> 3;
-		my $mode_packet =
-		  $self->{protocol}
-		  ->message_prepare( REPORT_DIGITAL => $port_number, 1 );
-		$self->{io}->data_write($mode_packet);
+	return undef unless $self->is_supported_mode($pin,$mode);
 
-		$mode_packet =
-		  $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
-		return $self->{io}->data_write($mode_packet);
+	PIN_MODE_HANDLER: {
+	
+		( $mode == PIN_INPUT or $mode == PIN_OUTPUT ) and do {
+			my $port_number = $pin >> 3;
+			$self->{io}->data_write($self->{protocol}->message_prepare( REPORT_DIGITAL => $port_number, 1 ));
+			$self->{io}->data_write($self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode ));
+			last;
+		};
+
+		$mode == PIN_ANALOG and do {
+			my $port_number = $pin >> 3;
+			$self->{io}->data_write($self->{protocol}->message_prepare( REPORT_ANALOG => $port_number, 1 ));
+			$self->{io}->data_write($self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode ));
+			last;
+		};
+
+		( $mode == PIN_PWM || $mode == PIN_I2C || $mode == PIN_ONEWIRE ) and do {
+			$self->{io}->data_write($self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode ));
+			last;
+		};
 	};
-
-	$mode == PIN_ANALOG and do {
-		my $port_number = $pin >> 3;
-		my $mode_packet =
-		  $self->{protocol}
-		  ->message_prepare( REPORT_ANALOG => $port_number, 1 );
-		$self->{io}->data_write($mode_packet);
-
-		$mode_packet =
-		  $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
-		return $self->{io}->data_write($mode_packet);
-	};
-
-	( $mode == PIN_PWM || $mode == PIN_I2C || $mode == PIN_ONEWIRE ) and do {
-		my $mode_packet =
-		  $self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode );
-		return $self->{io}->data_write($mode_packet);
-	};
+	$self->{pin_modes}->{$pin} = $mode;
+	return 1;
 }
 
 =head2 digital_write
@@ -368,6 +403,7 @@ sub digital_write {
 
 	# --------------------------------------------------
 	my ( $self, $pin, $state ) = @_;
+	return undef unless $self->is_configured_mode($pin,PIN_OUTPUT);
 	my $port_number = $pin >> 3;
 
 	my $pin_offset = $pin % 8;
@@ -381,11 +417,8 @@ sub digital_write {
 		$port_state &= $pin_mask ^ 0xff;
 	}
 	$self->{ports}[$port_number] = $port_state;
-
-	my $mode_packet =
-	  $self->{protocol}
-	  ->message_prepare( DIGITAL_MESSAGE => $port_number, $port_state );
-	return $self->{io}->data_write($mode_packet);
+	$self->{io}->data_write($self->{protocol}->message_prepare( DIGITAL_MESSAGE => $port_number, $port_state ));
+	return 1;
 }
 
 =head2 digital_read
@@ -399,6 +432,7 @@ sub digital_read {
 
 	# --------------------------------------------------
 	my ( $self, $pin ) = @_;
+	return undef unless $self->is_configured_mode($pin,PIN_INPUT);
 	my $port_number = $pin >> 3;
 	my $pin_offset  = $pin % 8;
 	my $pin_mask    = 1 << $pin_offset;
@@ -417,6 +451,7 @@ sub analog_read {
 	# --------------------------------------------------
 	#
 	my ( $self, $pin ) = @_;
+	return undef unless $self->is_configured_mode($pin,PIN_ANALOG);
 	return $self->{analog_pins}[$pin];
 }
 
@@ -430,14 +465,12 @@ sub analog_write {
 	# Sets the PWM value on an arduino
 	#
 	my ( $self, $pin, $value ) = @_;
+	return undef unless $self->is_configured_mode($pin,PIN_PWM);
 
 	# FIXME: 8 -> 7 bit translation should be done in the protocol module
 	my $byte_0 = $value & 0x7f;
 	my $byte_1 = $value >> 7;
-	my $mode_packet =
-	  $self->{protocol}
-	  ->message_prepare( ANALOG_MESSAGE => $pin, $byte_0, $byte_1 );
-	return $self->{io}->data_write($mode_packet);
+	return $self->{io}->data_write($self->{protocol}->message_prepare( ANALOG_MESSAGE => $pin, $byte_0, $byte_1 ));
 }
 
 =head2 pwm_write
@@ -621,16 +654,14 @@ sub scheduler_query_task {
 
 sub onewire_search {
 	my ( $self, $pin ) = @_;
-	my $onewire_packet = 
-	  $self->{protocol}->packet_onewire_search_request( $pin );
-	return $self->{io}->data_write($onewire_packet);
+	return undef unless $self->is_configured_mode($pin,PIN_ONEWIRE);
+	return $self->{io}->data_write($self->{protocol}->packet_onewire_search_request( $pin ));
 }
 
 sub onewire_config {
 	my ( $self, $pin, $power ) = @_;
-	my $onewire_packet =
-	  $self->{protocol}->packet_onewire_config_request( $pin, $power );
-	return $self->{io}->data_write($onewire_packet);
+	return undef unless $self->is_configured_mode($pin,PIN_ONEWIRE);
+	return $self->{io}->data_write($self->{protocol}->packet_onewire_config_request( $pin, $power ));
 }
 
 sub onewire_reset {
@@ -660,9 +691,8 @@ sub onewire_write {
 
 sub onewire_command_series {
 	my ( $self, $pin, $args ) = @_;
-	my $onewire_packet = 
-	  $self->{protocol}->packet_onewire_request( $pin, $args );
-	return $self->{io}->data_write($onewire_packet);
+	return undef unless $self->is_configured_mode($pin,PIN_ONEWIRE);
+	return $self->{io}->data_write($self->{protocol}->packet_onewire_request( $pin, $args ));
 }
 
 =head2 poll
@@ -685,18 +715,22 @@ sub poll {
 
 sub observe_digital {
 	my ( $self, $pin, $observer, $context ) = @_;
+	return undef unless ($self->is_supported_mode($pin,PIN_INPUT));
 	$self->{digital_observer}[$pin] = {
 		method  => $observer,
 		context => $context,	
 	};
+	return 1;
 }
 
 sub observe_analog {
 	my ( $self, $pin, $observer, $context ) = @_;
+	return undef unless ($self->is_supported_mode($pin,PIN_ANALOG));
 	$self->{analog_observer}[$pin] =  {
 		method  => $observer,
 		context => $context,	
 	};
+	return 1;
 }
 
 sub observe_sysex {
@@ -705,22 +739,28 @@ sub observe_sysex {
 		method  => $observer,
 		context => $context,	
 	};
+	return 1;
 }
 
 sub observe_i2c {
 	my ( $self, $observer, $context ) = @_;
+	return undef if (defined $self->{metadata}->{i2cpins} && @$self->{metadata}->{i2cpins} == 0 );
 	$self->{i2c_observer} =  {
 		method  => $observer,
 		context => $context,	
 	};
+	return 1;
 }
 
 sub observe_onewire {
 	my ( $self, $pin, $observer, $context ) = @_;
+	return undef unless ($self->is_supported_mode($pin,PIN_INPUT));
+	return undef unless ($self->is_supported_mode($pin,PIN_OUTPUT));
 	$self->{onewire_observer}[$pin] =  {
 		method  => $observer,
 		context => $context,	
 	};
+	return 1;
 }
 
 sub observe_scheduler {
@@ -729,6 +769,19 @@ sub observe_scheduler {
 		method  => $observer,
 		context => $context,	
 	};
+	return 1;
+}
+
+sub is_supported_mode {
+	my ($self,$pin,$mode) = @_;
+	die "unsupported mode '".$mode."' for pin '".$pin."'" if (defined $self->{metadata}->{capabilities} and (!(defined $self->{metadata}->{capabilities}->{$pin}) or !(defined $self->{metadata}->{capabilities}->{$pin}->{$mode})));
+	return 1;
+}
+
+sub is_configured_mode {
+	my ($self,$pin,$mode) = @_;
+	die "pin '".$pin."' is not configured for mode '".$mode."'" if (!defined $self->{pin_modes}->{$pin} or $self->{pin_modes}->{$pin} != $mode);
+	return 1;
 }
 
 1;
