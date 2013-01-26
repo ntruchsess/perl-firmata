@@ -44,6 +44,9 @@ use Device::Firmata::Base
 
 	# For information about the device. eg: firmware version
 	metadata => {},
+	
+	# latest STRING_DATA response:
+	stringresponse => {},
   };
 
 =head2 open
@@ -318,6 +321,7 @@ sub sysex_handle {
 			my $observer = $self->{string_observer};
 			if (defined $observer) {
 				$observer->{method}( $data->{string}, $observer->{context} );
+				$self->{stringresponse} = $data->{string};
 			}
 			last;
 		}
