@@ -40,6 +40,7 @@ $MIDI_DATA_SIZES = {
 	# Special for version queries
 	0xF4 => 2,
 	0xF9 => 2,
+	0x71 => 0,
 	0xFF => 0,
 };
 
@@ -256,53 +257,61 @@ sub sysex_parse {
 	my $command = shift @$sysex_data;
 	if ( defined $command ) {
 		my $command_str = $protocol_lookup->{$command};
+		
+		if ($command_str) {
+			my $return_data;
 
-		my $return_data;
+			COMMAND_HANDLER: {
+				
+				$command == $protocol_commands->{STRING_DATA} and do {
+					$return_data = $self->handle_string_data($sysex_data);
+					last;
+				};
+				
+				$command == $protocol_commands->{REPORT_FIRMWARE} and do {
+					$return_data = $self->handle_report_firmware($sysex_data);
+					last;
+				};
 
-	  COMMAND_HANDLER: {
-			$command == $protocol_commands->{REPORT_FIRMWARE} and do {
-				$return_data = $self->handle_report_firmware($sysex_data);
-				last;
-			};
+				$command == $protocol_commands->{CAPABILITY_RESPONSE} and do {
+					$return_data = $self->handle_capability_response($sysex_data);
+					last;
+				};
 
-			$command == $protocol_commands->{CAPABILITY_RESPONSE} and do {
-				$return_data = $self->handle_capability_response($sysex_data);
-				last;
-			};
+				$command == $protocol_commands->{ANALOG_MAPPING_RESPONSE} and do {
+					$return_data =
+					  $self->handle_analog_mapping_response($sysex_data);
+					last;
+				};
 
-			$command == $protocol_commands->{ANALOG_MAPPING_RESPONSE} and do {
-				$return_data =
-				  $self->handle_analog_mapping_response($sysex_data);
-				last;
-			};
-
-			$command == $protocol_commands->{PIN_STATE_RESPONSE} and do {
-				$return_data = $self->handle_pin_state_response($sysex_data);
-				last;
-			};
+				$command == $protocol_commands->{PIN_STATE_RESPONSE} and do {
+					$return_data = $self->handle_pin_state_response($sysex_data);
+					last;
+				};
 			
-			$command == $protocol_commands->{I2C_REPLY} and do {
-				$return_data = $self->handle_i2c_reply($sysex_data);
-				last;
-			};
+				$command == $protocol_commands->{I2C_REPLY} and do {
+					$return_data = $self->handle_i2c_reply($sysex_data);
+					last;
+				};
 
-			$command == $protocol_commands->{ONEWIRE_REPLY} and do {
-				$return_data = $self->handle_onewire_reply($sysex_data);
-				last;
-			};
+				$command == $protocol_commands->{ONEWIRE_REPLY} and do {
+					$return_data = $self->handle_onewire_reply($sysex_data);
+					last;
+				};
 
-			$command == $protocol_commands->{SCHEDULER_REPLY} and do {
-				$return_data = $self->handle_scheduler_reply($sysex_data);
-				last;
-			};
+				$command == $protocol_commands->{SCHEDULER_REPLY} and do {
+					$return_data = $self->handle_scheduler_reply($sysex_data);
+					last;
+				};
 
+			}
+
+			return {
+				command     => $command,
+				command_str => $command_str,
+				data        => $return_data
+			};
 		}
-
-		return {
-			command     => $command,
-			command_str => $command_str,
-			data        => $return_data
-		};
 	}
 	return undef;
 }
@@ -367,6 +376,13 @@ sub packet_query_version {
 
 sub handle_query_version_response {
 
+}
+
+sub handle_string_data {
+	my ( $self, $sysex_data ) = @_;
+	return {
+		string => double_7bit_to_string($sysex_data)
+	};
 }
 
 =head2 packet_query_firmware

@@ -37,6 +37,7 @@ use Device::Firmata::Base
 	i2c_observer       => undef,
 	onewire_observer   => [],
 	scheduler_observer => undef,
+	string_observer    => undef,
 	
 	# To track scheduled tasks
 	tasks => [],
@@ -312,6 +313,14 @@ sub sysex_handle {
 			}
 			last;
 		};
+		
+		$sysex_message->{command_str} eq 'STRING_DATA' and do {
+			my $observer = $self->{string_observer};
+			if (defined $observer) {
+				$observer->{method}( $data->{string}, $observer->{context} );
+			}
+			last;
+		}
 	}
 }
 
@@ -787,6 +796,15 @@ sub observe_scheduler {
 	$self->{scheduler_observer} = {
 		method  => $observer,
 		context => $context,	
+	};
+	return 1;
+}
+
+sub observe_string {
+	my ( $self, $observer, $context ) = @_;
+	$self->{string_observer} = {
+		method  => $observer,
+		context => $context,
 	};
 	return 1;
 }
