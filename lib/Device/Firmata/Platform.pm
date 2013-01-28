@@ -253,9 +253,6 @@ sub sysex_handle {
 				if (defined $capabilities->{$pin}) {
 					if ($capabilities->{$pin}->{PIN_INPUT+0}) {
 						push @inputpins, $pin;
-						if ($capabilities->{$pin}->{PIN_OUTPUT+0}) {
-							push @onewirepins, $pin;
-						}
 					}
 					if ($capabilities->{$pin}->{PIN_OUTPUT+0}) {
 						push @outputpins, $pin;
@@ -265,6 +262,9 @@ sub sysex_handle {
 					}
 					if ($capabilities->{$pin}->{PIN_I2C+0}) {
 						push @i2cpins, $pin;
+					}
+					if ($capabilities->{$pin}->{PIN_OUTPUT+0}) {
+						push @onewirepins, $pin;
 					}
 				}
 			}
