@@ -690,6 +690,12 @@ sub onewire_search {
 	return $self->{io}->data_write($self->{protocol}->packet_onewire_search_request( $pin ));
 }
 
+sub onewire_search_alarms {
+	my ( $self, $pin ) = @_;
+	return undef unless $self->is_configured_mode($pin,PIN_ONEWIRE);
+	return $self->{io}->data_write($self->{protocol}->packet_onewire_search_alarms_request( $pin ));
+}
+
 sub onewire_config {
 	my ( $self, $pin, $power ) = @_;
 	return undef unless $self->is_configured_mode($pin,PIN_ONEWIRE);

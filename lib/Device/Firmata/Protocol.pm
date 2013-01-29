@@ -49,6 +49,8 @@ our $ONE_WIRE_COMMANDS = {
 	CONFIG_REQUEST     => 0x41,
 	SEARCH_REPLY       => 0x42,
 	READ_REPLY         => 0x43,
+	SEARCH_ALARMS_REQUEST => 0x44,
+	SEARCH_ALARMS_REPLY => 0x45,
 	RESET_REQUEST_BIT  => 0x01,
 	SKIP_REQUEST_BIT   => 0x02,
 	SELECT_REQUEST_BIT => 0x04,
@@ -694,6 +696,11 @@ sub packet_onewire_search_request {
 	return $self->packet_sysex_command( ONEWIRE_REQUEST,$ONE_WIRE_COMMANDS->{SEARCH_REQUEST},$pin);
 };
 
+sub packet_onewire_search_alarms_request {
+	my ( $self, $pin ) = @_;
+	return $self->packet_sysex_command( ONEWIRE_REQUEST,$ONE_WIRE_COMMANDS->{SEARCH_ALARMS_REQUEST},$pin);
+};
+
 sub packet_onewire_config_request {
 	my ( $self, $pin, $power ) = @_;
 	return $self->packet_sysex_command( ONEWIRE_REQUEST, $ONE_WIRE_COMMANDS->{CONFIG_REQUEST},$pin,
@@ -768,7 +775,7 @@ sub handle_onewire_reply {
 				};
 			  };
 
-			$command == $ONE_WIRE_COMMANDS->{SEARCH_REPLY}
+			($command == $ONE_WIRE_COMMANDS->{SEARCH_REPLY} or $command == $ONE_WIRE_COMMANDS->{SEARCH_ALARMS_REPLY}) 
 			  and do {    #PIN,COMMAND,ADDRESS...
 
 				my @devices;
@@ -780,7 +787,7 @@ sub handle_onewire_reply {
 				}
 				return {
 					pin     => $pin,
-					command => 'SEARCH_REPLY',
+					command => $command == $ONE_WIRE_COMMANDS->{SEARCH_REPLY} ? 'SEARCH_REPLY' : 'SEARCH_ALARMS_REPLY',
 					devices => \@devices,
 				};
 			  };
@@ -802,6 +809,12 @@ sub packet_delete_task {
 sub packet_add_to_task {
 	my ($self,$id,@data) = @_;
 	my $packet = $self->packet_sysex_command('SCHEDULER_REQUEST', $SCHEDULER_COMMANDS->{ADD_TO_FIRMATA_TASK}, $id, pack_as_7bit(@data));
+	return $packet;
+}
+
+sub packet_delay_task {
+	my ($self,$time_ms) = @_;
+	my $packet = $self->packet_sysex_command('SCHEDULER_REQUEST', $SCHEDULER_COMMANDS->{DELAY_FIRMATA_TASK}, pack_as_7bit($time_ms & 0xFF, ($time_ms & 0xFF00)>>8, ($time_ms & 0xFF0000)>>16,($time_ms & 0xFF000000)>>24));
 	return $packet;
 }
 

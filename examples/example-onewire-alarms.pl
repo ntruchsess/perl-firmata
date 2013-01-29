@@ -16,10 +16,11 @@ my $pin = 10; #connect DS18B20 to pin 10
 my $device = Device::Firmata->open('/dev/ttyUSB0')
   or die "Could not connect to Firmata Server";
 
+$device->system_reset();
 $device->firmware_version_query();
 
 for ( my $j = 0 ; $j < 20 ; $j++ ) {
-	sleep 0.1;
+	select (undef,undef,undef,0.1);
 	$device->poll();
 }
 
@@ -32,7 +33,6 @@ $device->observe_scheduler( \&onSchedulerMessage );
 $device->pin_mode( $pin, PIN_ONEWIRE );
 
 $device->onewire_search($pin);
-
 while ( ( not defined $ow_devices ) or ( @$ow_devices < 2 ) ) {
 	$device->poll();
 	sleep 1;
@@ -42,45 +42,39 @@ $device->scheduler_reset();
 my $taskid0 = $device->scheduler_create_task();
 
 $device->scheduler_add_to_task( $taskid0,
-	$device->{protocol}->packet_onewire_request($pin , {
+	$device->{protocol}->packet_onewire_request($pin , { # do conversion device 1
 		reset => 1,
 		select => @$ow_devices[0],
 		write => [0x44],
-		delay => 800,
 	}) );
 $device->scheduler_add_to_task( $taskid0,
-	$device->{protocol}->packet_onewire_request($pin , {
+	$device->{protocol}->packet_onewire_request($pin , { # do conversion device 2
 		reset => 1,
-		select => @$ow_devices[0],
-		write => [0xBE],
-		read => 9,
-		delay => 1200,
+		select => @$ow_devices[1],
+		write => [0x44],
+		delay => 1000,
 	}) );
+$device->scheduler_add_to_task( $taskid0,
+	$device->{protocol}->packet_onewire_search_alarms_request($pin)); # do alarm search
+$device->scheduler_add_to_task( $taskid0,
+	$device->{protocol}->packet_delay_task(9000)); # repeat every 10 sec (1000ms+9000ms) 
 print "schedule taskid: ".$taskid0."\n";
 $device->scheduler_schedule_task( $taskid0, 0 );
 	
-my $taskid1 = $device->scheduler_create_task();
-$device->scheduler_add_to_task( $taskid1,
-	$device->{protocol}->packet_onewire_request($pin , {
-		reset => 1,
-		select => @$ow_devices[1],
-		write => [0x44],
-		delay => 800,
-	}) );
-$device->scheduler_add_to_task( $taskid1,
-	$device->{protocol}->packet_onewire_request($pin , {
-		reset => 1,
-		select => @$ow_devices[1],
-		write => [0xBE],
-		read => 9,
-		delay => 1200,
-	}) );
-print "schedule taskid: ".$taskid1."\n";
-$device->scheduler_schedule_task( $taskid1, 0 );
-
 $device->scheduler_query_all_tasks();
 $device->scheduler_query_task($taskid0);
-$device->scheduler_query_task($taskid1);
+
+$device->onewire_command_series($pin, {
+	reset => 1,
+	select => @$ow_devices[0],
+	write => [0x4E,0b00011001,0b00000000,0b01111111], # alarm if above 25°C or below 0°C
+});
+
+$device->onewire_command_series($pin, {
+	reset => 1,
+	select => @$ow_devices[1],
+	write => [0x4E,0b01111111,0b00011001,0b01111111], # alarm if below 25°C
+});
 
 while (1) {
 	for (my $i=0;$i<50;$i++) {
@@ -101,24 +95,31 @@ sub onOneWireMessage {
 		  . "\n" );
 
   REPLY_HANDLER: {
-		$data->{command} eq 'SEARCH_REPLY' and do {
+		($data->{command} eq 'SEARCH_REPLY' or $data->{command} eq 'SEARCH_ALARMS_REPLY' ) and do {
 			$ow_devices = $data->{devices};
 			if ($ow_devices) {
-				print( "devices found: " . @$ow_devices . "\n" );
+				print( $data->{command}.", devices found: " . @$ow_devices . "\n" );
 				for ( my $i = 0 ; $i < @$ow_devices ; $i++ ) {
-					my $device      = @$ow_devices[$i];
-					my $identityref = $device->{identity};
+					my $ow_device      = @$ow_devices[$i];
+					my $identityref = $ow_device->{identity};
 					my @identity    = @$identityref;
 					my $identity;
 					for ( my $i = 0 ; $i < @identity ; $i++ ) {
 						$identity .= " " . uc( sprintf( "%x", $identity[$i] ) );
 					}
 					print "family: "
-					  . $device->{family}
+					  . $ow_device->{family}
 					  . ", identity: "
 					  . $identity
 					  . ", crc: "
-					  . $device->{crc} . "\n";
+					  . $ow_device->{crc} . "\n";
+					
+					$device->onewire_command_series($pin,{
+						reset => 1,
+						select => $ow_device,
+						write => [0xBE],
+						read => 9,
+					});
 				}
 			}
 			else {

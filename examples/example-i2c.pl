@@ -13,6 +13,7 @@ $Device::Firmata::DEBUG = 0;
 my $device = Device::Firmata->open('/dev/ttyUSB0')
   or die "Could not connect to Firmata Server";
 
+$device->system_reset();
 $device->observe_i2c( \&onI2CMessage );
 
 $device->pin_mode( 18, PIN_I2C );
