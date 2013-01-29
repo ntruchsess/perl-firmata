@@ -319,9 +319,9 @@ sub sysex_handle {
 		
 		$sysex_message->{command_str} eq 'STRING_DATA' and do {
 			my $observer = $self->{string_observer};
+			$self->{stringresponse} = $data->{string};
 			if (defined $observer) {
 				$observer->{method}( $data->{string}, $observer->{context} );
-				$self->{stringresponse} = $data->{string};
 			}
 			last;
 		}
