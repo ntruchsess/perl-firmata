@@ -40,6 +40,8 @@ $MIDI_DATA_SIZES = {
 	# Special for version queries
 	0xF4 => 2,
 	0xF9 => 2,
+	0x71 => 0,
+	0xFF => 0,
 };
 
 our $ONE_WIRE_COMMANDS = {
@@ -47,6 +49,8 @@ our $ONE_WIRE_COMMANDS = {
 	CONFIG_REQUEST     => 0x41,
 	SEARCH_REPLY       => 0x42,
 	READ_REPLY         => 0x43,
+	SEARCH_ALARMS_REQUEST => 0x44,
+	SEARCH_ALARMS_REPLY => 0x45,
 	RESET_REQUEST_BIT  => 0x01,
 	SKIP_REQUEST_BIT   => 0x02,
 	SELECT_REQUEST_BIT => 0x04,
@@ -255,53 +259,61 @@ sub sysex_parse {
 	my $command = shift @$sysex_data;
 	if ( defined $command ) {
 		my $command_str = $protocol_lookup->{$command};
+		
+		if ($command_str) {
+			my $return_data;
 
-		my $return_data;
+			COMMAND_HANDLER: {
+				
+				$command == $protocol_commands->{STRING_DATA} and do {
+					$return_data = $self->handle_string_data($sysex_data);
+					last;
+				};
+				
+				$command == $protocol_commands->{REPORT_FIRMWARE} and do {
+					$return_data = $self->handle_report_firmware($sysex_data);
+					last;
+				};
 
-	  COMMAND_HANDLER: {
-			$command == $protocol_commands->{REPORT_FIRMWARE} and do {
-				$return_data = $self->handle_report_firmware($sysex_data);
-				last;
-			};
+				$command == $protocol_commands->{CAPABILITY_RESPONSE} and do {
+					$return_data = $self->handle_capability_response($sysex_data);
+					last;
+				};
 
-			$command == $protocol_commands->{CAPABILITY_RESPONSE} and do {
-				$return_data = $self->handle_capability_response($sysex_data);
-				last;
-			};
+				$command == $protocol_commands->{ANALOG_MAPPING_RESPONSE} and do {
+					$return_data =
+					  $self->handle_analog_mapping_response($sysex_data);
+					last;
+				};
 
-			$command == $protocol_commands->{ANALOG_MAPPING_RESPONSE} and do {
-				$return_data =
-				  $self->handle_analog_mapping_response($sysex_data);
-				last;
-			};
-
-			$command == $protocol_commands->{PIN_STATE_RESPONSE} and do {
-				$return_data = $self->handle_pin_state_response($sysex_data);
-				last;
-			};
+				$command == $protocol_commands->{PIN_STATE_RESPONSE} and do {
+					$return_data = $self->handle_pin_state_response($sysex_data);
+					last;
+				};
 			
-			$command == $protocol_commands->{I2C_REPLY} and do {
-				$return_data = $self->handle_i2c_reply($sysex_data);
-				last;
-			};
+				$command == $protocol_commands->{I2C_REPLY} and do {
+					$return_data = $self->handle_i2c_reply($sysex_data);
+					last;
+				};
 
-			$command == $protocol_commands->{ONEWIRE_REPLY} and do {
-				$return_data = $self->handle_onewire_reply($sysex_data);
-				last;
-			};
+				$command == $protocol_commands->{ONEWIRE_REPLY} and do {
+					$return_data = $self->handle_onewire_reply($sysex_data);
+					last;
+				};
 
-			$command == $protocol_commands->{SCHEDULER_REPLY} and do {
-				$return_data = $self->handle_scheduler_reply($sysex_data);
-				last;
-			};
+				$command == $protocol_commands->{SCHEDULER_REPLY} and do {
+					$return_data = $self->handle_scheduler_reply($sysex_data);
+					last;
+				};
 
+			}
+
+			return {
+				command     => $command,
+				command_str => $command_str,
+				data        => $return_data
+			};
 		}
-
-		return {
-			command     => $command,
-			command_str => $command_str,
-			data        => $return_data
-		};
 	}
 	return undef;
 }
@@ -368,6 +380,13 @@ sub handle_query_version_response {
 
 }
 
+sub handle_string_data {
+	my ( $self, $sysex_data ) = @_;
+	return {
+		string => double_7bit_to_string($sysex_data)
+	};
+}
+
 =head2 packet_query_firmware
 
 Craft a firmware variant query packet to be sent
@@ -417,28 +436,26 @@ sub handle_capability_response {
 
 	my ( $self, $sysex_data ) = @_;
 
-	my %pins;
+	my %capabilities;
 
-	my $firstbyte = shift @$sysex_data;
+	my $byte = shift @$sysex_data;
 	my $i=0;
-	while ( defined $firstbyte ) {
+	while ( defined $byte ) {
 
-		my @pinmodes;
-		while ( defined $firstbyte && $firstbyte != 127 ) {
-			my $pinmode = {
-				mode       => $firstbyte,
-				mode_str   => $MODENAMES->{$firstbyte},
+		my %pinmodes;
+		while ( defined $byte && $byte != 127 ) {
+			$pinmodes{$byte} = {
+				mode_str   => $MODENAMES->{$byte},
 				resolution => shift @$sysex_data    # /secondbyte
-			};
-			push @pinmodes, $pinmode;
-			$firstbyte = shift @$sysex_data;
+			}; 
+			$byte = shift @$sysex_data;
 		}
-		$pins{$i}=\@pinmodes;
+		$capabilities{$i}=\%pinmodes;
 		$i++;
-		$firstbyte = shift @$sysex_data;
+		$byte = shift @$sysex_data;
 	}
 
-	return { pins => \%pins };
+	return { capabilities => \%capabilities };
 
 }
 
@@ -470,13 +487,13 @@ sub handle_analog_mapping_response {
 	
 	while ( defined $pin_mapping ) {
 		if ($pin_mapping!=127) {
-			$pins{$i}=$pin_mapping;
+			$pins{$pin_mapping}=$i;
 		}
 		$pin_mapping = shift @$sysex_data;
 		$i++;
 	}
 
-	return { pins => \%pins };
+	return { mappings => \%pins };
 }
 
 #/* pin state query
@@ -679,6 +696,11 @@ sub packet_onewire_search_request {
 	return $self->packet_sysex_command( ONEWIRE_REQUEST,$ONE_WIRE_COMMANDS->{SEARCH_REQUEST},$pin);
 };
 
+sub packet_onewire_search_alarms_request {
+	my ( $self, $pin ) = @_;
+	return $self->packet_sysex_command( ONEWIRE_REQUEST,$ONE_WIRE_COMMANDS->{SEARCH_ALARMS_REQUEST},$pin);
+};
+
 sub packet_onewire_config_request {
 	my ( $self, $pin, $power ) = @_;
 	return $self->packet_sysex_command( ONEWIRE_REQUEST, $ONE_WIRE_COMMANDS->{CONFIG_REQUEST},$pin,
@@ -753,7 +775,7 @@ sub handle_onewire_reply {
 				};
 			  };
 
-			$command == $ONE_WIRE_COMMANDS->{SEARCH_REPLY}
+			($command == $ONE_WIRE_COMMANDS->{SEARCH_REPLY} or $command == $ONE_WIRE_COMMANDS->{SEARCH_ALARMS_REPLY}) 
 			  and do {    #PIN,COMMAND,ADDRESS...
 
 				my @devices;
@@ -765,7 +787,7 @@ sub handle_onewire_reply {
 				}
 				return {
 					pin     => $pin,
-					command => 'SEARCH_REPLY',
+					command => $command == $ONE_WIRE_COMMANDS->{SEARCH_REPLY} ? 'SEARCH_REPLY' : 'SEARCH_ALARMS_REPLY',
 					devices => \@devices,
 				};
 			  };
@@ -787,6 +809,12 @@ sub packet_delete_task {
 sub packet_add_to_task {
 	my ($self,$id,@data) = @_;
 	my $packet = $self->packet_sysex_command('SCHEDULER_REQUEST', $SCHEDULER_COMMANDS->{ADD_TO_FIRMATA_TASK}, $id, pack_as_7bit(@data));
+	return $packet;
+}
+
+sub packet_delay_task {
+	my ($self,$time_ms) = @_;
+	my $packet = $self->packet_sysex_command('SCHEDULER_REQUEST', $SCHEDULER_COMMANDS->{DELAY_FIRMATA_TASK}, pack_as_7bit($time_ms & 0xFF, ($time_ms & 0xFF00)>>8, ($time_ms & 0xFF0000)>>16,($time_ms & 0xFF000000)>>24));
 	return $packet;
 }
 
