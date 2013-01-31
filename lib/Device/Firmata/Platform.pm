@@ -167,7 +167,7 @@ sub messages_handle {
 			# Handle analog pin messages
 			$command eq 'ANALOG_MESSAGE' and do {
 				my $pin_number = $message->{command} & 0x0f;
-				my $pin_value  = ( $data->[0] | ( $data->[1] << 7 ) ) / 1023;
+				my $pin_value  = ( $data->[0] | ( $data->[1] << 7 ) );
 				if (defined $self->{metadata}{analog_mappings}) {
 					$pin_number = $self->{metadata}{analog_mappings}{$pin_number};
 				}				
