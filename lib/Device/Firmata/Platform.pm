@@ -26,6 +26,9 @@ use Device::Firmata::Base
 
 	# To track internal status
 	analog_pins => [],
+	analog_resolutions => {},
+	pwm_resolutions    => {},
+	servo_resolutions  => {},
 	ports       => [],
 	pins        => {},
 	pin_modes   => {},
@@ -167,7 +170,7 @@ sub messages_handle {
 			# Handle analog pin messages
 			$command eq 'ANALOG_MESSAGE' and do {
 				my $pin_number = $message->{command} & 0x0f;
-				my $pin_value  = ( $data->[0] | ( $data->[1] << 7 ) ) / 1023;
+				my $pin_value  = ( $data->[0] | ( $data->[1] << 7 ) );
 				if (defined $self->{metadata}{analog_mappings}) {
 					$pin_number = $self->{metadata}{analog_mappings}{$pin_number};
 				}				
@@ -247,6 +250,9 @@ sub sysex_handle {
 			my @analogpins;
 			my @inputpins;
 			my @outputpins;
+			my @pwmpins;
+			my @servopins;
+			my @shiftpins;
 			my @i2cpins;
 			my @onewirepins;
 			foreach my $pin (keys %$capabilities) {
@@ -259,6 +265,18 @@ sub sysex_handle {
 					}
 					if ($capabilities->{$pin}->{PIN_ANALOG+0}) {
 						push @analogpins, $pin;
+						$self->{metadata}{analog_resolutions}{$pin} = $capabilities->{$pin}->{PIN_ANALOG+0}->{resolution}; 
+					}
+					if ($capabilities->{$pin}->{PIN_PWM+0}) {
+						push @pwmpins, $pin;
+						$self->{metadata}{pwm_resolutions}{$pin} = $capabilities->{$pin}->{PIN_PWM+0}->{resolution}; 
+					}
+					if ($capabilities->{$pin}->{PIN_SERVO+0}) {
+						push @servopins, $pin;
+						$self->{metadata}{servo_resolutions}{$pin} = $capabilities->{$pin}->{PIN_SERVO+0}->{resolution}; 
+					}
+					if ($capabilities->{$pin}->{PIN_SHIFT+0}) {
+						push @shiftpins, $pin;
 					}
 					if ($capabilities->{$pin}->{PIN_I2C+0}) {
 						push @i2cpins, $pin;
@@ -271,6 +289,9 @@ sub sysex_handle {
 			$self->{metadata}{input_pins}   = \@inputpins;
 			$self->{metadata}{output_pins}  = \@outputpins;
 			$self->{metadata}{analog_pins}  = \@analogpins;
+			$self->{metadata}{pwm_pins}     = \@pwmpins;
+			$self->{metadata}{servo_pins}   = \@servopins;
+			$self->{metadata}{shift_pins}   = \@shiftpins;
 			$self->{metadata}{i2c_pins}     = \@i2cpins;
 			$self->{metadata}{onewire_pins} = \@onewirepins;
 			last;
@@ -300,7 +321,7 @@ sub sysex_handle {
 			last;
 		};
 
-		$sysex_message->{command_str} eq 'ONEWIRE_REPLY' and do {
+		$sysex_message->{command_str} eq 'ONEWIRE_DATA' and do {
 			my $pin      = $data->{pin};
 			my $observer = $self->{onewire_observer}[$pin];
 			if (defined $observer) {
@@ -309,7 +330,7 @@ sub sysex_handle {
 			last;
 		};
 		  
-		$sysex_message->{command_str} eq 'SCHEDULER_REPLY' and do {
+		$sysex_message->{command_str} eq 'SCHEDULER_DATA' and do {
 			my $observer = $self->{scheduler_observer};
 			if (defined $observer) {
 				$observer->{method}( $data, $observer->{context} );
@@ -330,11 +351,12 @@ sub sysex_handle {
 
 =head2 probe
 
-Request the version of the protocol that the
-target device is using. Sometimes, we'll have to
-wait a couple of seconds for the response so we'll
-try for 2 seconds and rapidly fire requests if 
-we don't get a response quickly enough ;)
+On device boot time we wait 3 seconds for firmware name
+that the target device is using.
+If not received the starting message, then we wait for
+response another 2 seconds and fire requests for version.
+If the response received, then we store protocol version
+and analog mapping and capability.
 
 =cut
 
@@ -343,46 +365,29 @@ sub probe {
 	# --------------------------------------------------
 	my ($self) = @_;
 
-	my $proto = $self->{protocol};
-	my $io    = $self->{io};
+	$self->{metadata}{firmware}         = '';
 	$self->{metadata}{firmware_version} = '';
 
-	# Wait for 10 seconds only
-	my $end_tics = time + 10;
-
-	# Query every .5 seconds
-	my $query_tics = time;
+	# Wait for 5 seconds only
+	my $end_tics = time + 5;
+	$self->firmware_version_query();
 	while ( $end_tics >= time ) {
-
-		if ( $query_tics <= time ) {
-
-			# Query the device for information on the firmata firmware_version
-			$self->firmware_version_query();
-			select (undef,undef,undef,0.1);
-
-			# Try to get a response
-			$self->poll;
-
-			if (   $self->{metadata}{firmware}
-				&& $self->{metadata}{firmware_version} )
-			{
-				$self->{protocol}->{protocol_version} =	$self->{metadata}{firmware_version};
-
-				$self->analog_mapping_query();
-				$self->capability_query();
-				while ($end_tics >= time) {
-					if (($self->{metadata}{analog_mappings}) and ($self->{metadata}{capabilities})) {
-						return 1;
-					}
-					$self->poll();
-				}
+		select( undef, undef, undef, 0.2 );    # wait for response
+		if ( $self->poll && $self->{metadata}{firmware} && $self->{metadata}{firmware_version} ) {
+			$self->{protocol}->{protocol_version} = $self->{metadata}{firmware_version};
+			if ( ( $self->{metadata}{analog_mappings} ) and ( $self->{metadata}{capabilities} ) ) {
 				return 1;
 			}
-			$query_tics = time + 0.5;
+			else {
+				$self->analog_mapping_query();
+				$self->capability_query();
+			}
 		}
-		select (undef,undef,undef,0.1);
+		else {
+			$self->firmware_version_query() unless $end_tics - 2 >= time;    # version query on last 2 sec only
+		}
 	}
-	return undef;
+	return;
 }
 
 =head2 pin_mode
@@ -415,7 +420,7 @@ sub pin_mode {
 			last;
 		};
 
-		( $mode == PIN_PWM || $mode == PIN_I2C || $mode == PIN_ONEWIRE ) and do {
+		( $mode == PIN_PWM || $mode == PIN_I2C || $mode == PIN_ONEWIRE || $mode == PIN_SERVO ) and do {
 			$self->{io}->data_write($self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode ));
 			last;
 		};
@@ -570,6 +575,26 @@ sub i2c_stopreading {
 sub i2c_config {
 	my ( $self, $delay, @data ) = @_;
 	return $self->{io}->data_write($self->{protocol}->packet_i2c_config($delay,@data));
+}
+
+sub servo_write {
+
+	# --------------------------------------------------
+	# Sets the SERVO value on an arduino
+	#
+	my ( $self, $pin, $value ) = @_;
+	return undef unless $self->is_configured_mode($pin,PIN_SERVO);
+
+	# FIXME: 8 -> 7 bit translation should be done in the protocol module
+	my $byte_0 = $value & 0x7f;
+	my $byte_1 = $value >> 7;
+	return $self->{io}->data_write($self->{protocol}->message_prepare( ANALOG_MESSAGE => $pin, $byte_0, $byte_1 ));
+}
+
+sub servo_config {
+	my ( $self, $pin, $args ) = @_;
+	return undef unless $self->is_configured_mode($pin,PIN_SERVO);
+	return $self->{io}->data_write($self->{protocol}->packet_servo_config_request($pin,$args));	
 }
 
 sub scheduler_create_task {
