@@ -370,6 +370,7 @@ sub probe {
 
 	# Wait for 5 seconds only
 	my $end_tics = time + 5;
+	$self->firmware_version_query();
 	while ( $end_tics >= time ) {
 		select( undef, undef, undef, 0.2 );    # wait for response
 		if ( $self->poll && $self->{metadata}{firmware} && $self->{metadata}{firmware_version} ) {
