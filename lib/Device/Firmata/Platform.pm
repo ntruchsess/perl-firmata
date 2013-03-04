@@ -770,7 +770,7 @@ sub poll {
 
 	# --------------------------------------------------
 	my $self     = shift;
-	my $buf      = $self->{io}->data_read(100) or return;
+	my $buf      = $self->{io}->data_read(512) or return;
 	my $messages = $self->{protocol}->message_data_receive($buf);
 	$self->messages_handle($messages);
 	return $messages;
@@ -817,8 +817,7 @@ sub observe_i2c {
 
 sub observe_onewire {
 	my ( $self, $pin, $observer, $context ) = @_;
-	return undef unless ($self->is_supported_mode($pin,PIN_INPUT));
-	return undef unless ($self->is_supported_mode($pin,PIN_OUTPUT));
+	return undef unless ($self->is_supported_mode($pin,PIN_ONEWIRE));
 	$self->{onewire_observer}[$pin] =  {
 		method  => $observer,
 		context => $context,	
