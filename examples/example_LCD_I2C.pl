@@ -44,11 +44,11 @@ $lcd->createChar( 6, \@cross );
 $lcd->createChar( 7, \@retarrow );
 $lcd->home();
 
-$lcd->print("Liebe Inge...");
+$lcd->print("Hello World...");
 $lcd->setCursor( 0, 1 );
-$lcd->print(" Ich ");
+$lcd->print(" I ");
 $lcd->write(3);
-$lcd->print(" Dich!");
+$lcd->print(" Firmata!");
 select( undef, undef, undef, 5 );
 displayKeyCodes();
 while (1) {

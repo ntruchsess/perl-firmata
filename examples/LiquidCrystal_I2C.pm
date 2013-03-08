@@ -113,7 +113,6 @@ sub attach($$) {
 sub init_priv($) {
 	my $self = shift;
 
-	print "Wire.begin()\n";
 	$self->{displayfunction} =
 	  LCD_4BITMODE | LCD_1LINE |
 	  LCD_5x8DOTS;
@@ -361,10 +360,6 @@ sub write4bits($$) {
 sub expanderWrite($$) {
 	my ( $self, $data ) = @_;
 
-#	print "Wire->beginTransmission( $self->{Addr} );\n";
-#	print "Wire->write( ($data) | $self->{backlightval} );\n";
-#	print "Wire->endTransmission();\n";
-	
 	$self->{FirmataDevice}->i2c_write($self->{Addr},($data) | $self->{backlightval});
 }
 
