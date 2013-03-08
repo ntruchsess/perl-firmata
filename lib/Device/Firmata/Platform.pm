@@ -375,11 +375,15 @@ sub probe {
 		select( undef, undef, undef, 0.2 );    # wait for response
 		if ( $self->poll && $self->{metadata}{firmware} && $self->{metadata}{firmware_version} ) {
 			$self->{protocol}->{protocol_version} = $self->{metadata}{firmware_version};
-			if ( ( $self->{metadata}{analog_mappings} ) and ( $self->{metadata}{capabilities} ) ) {
-				return 1;
+			if ( $self->{metadata}{capabilities} ) {
+				if ( $self->{metadata}{analog_mappings} ) {
+					return 1;
+				}
+				else {
+					$self->analog_mapping_query();					
+				}
 			}
 			else {
-				$self->analog_mapping_query();
 				$self->capability_query();
 			}
 		}
@@ -420,10 +424,7 @@ sub pin_mode {
 			last;
 		};
 
-		( $mode == PIN_PWM || $mode == PIN_I2C || $mode == PIN_ONEWIRE || $mode == PIN_SERVO ) and do {
-			$self->{io}->data_write($self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode ));
-			last;
-		};
+		$self->{io}->data_write($self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode ));
 	};
 	$self->{pin_modes}->{$pin} = $mode;
 	return 1;
