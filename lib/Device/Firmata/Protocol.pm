@@ -742,6 +742,13 @@ sub packet_onewire_request {
 	}
 	if (defined $args->{read}) {
 		$subcommand |= $ONE_WIRE_COMMANDS->{READ_REQUEST_BIT};
+		if (defined $args->{correlationid}) {
+			push @data,$args->{correlationid} & 0xFF;
+			push @data,($args->{correlationid}>>8) & 0xFF;
+		} else {
+			push @data,0;
+			push @data,0;
+		}
 		push @data,$args->{read} & 0xFF;
 		push @data,($args->{read}>>8) & 0xFF;
 	}
@@ -775,12 +782,15 @@ sub handle_onewire_reply {
 
 				my @data = unpack_from_7bit(@$sysex_data);
 				my $device = shift_onewire_device_from_byte_array(\@data);
+				my $correlationid = shift @data;
+				$correlationid += (shift @data)<<8;
 
 				return {
 					pin     => $pin,
 					command => 'READ_REPLY',
 					device  => $device,
-					data    => \@data
+					data    => \@data,
+					correlationid => $correlationid
 				};
 			  };
 
