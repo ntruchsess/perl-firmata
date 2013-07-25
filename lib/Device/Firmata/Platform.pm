@@ -441,7 +441,7 @@ sub digital_write {
 
 	# --------------------------------------------------
 	my ( $self, $pin, $state ) = @_;
-	return undef unless $self->is_configured_mode($pin,PIN_OUTPUT);
+	return undef unless ($self->is_configured_mode($pin,PIN_OUTPUT) or $self->is_configured_mode($pin,PIN_INPUT));
 	my $port_number = $pin >> 3;
 
 	my $pin_offset = $pin % 8;
