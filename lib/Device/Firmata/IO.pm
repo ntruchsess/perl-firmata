@@ -17,7 +17,7 @@ use Device::Firmata::Base
         baudrate => 57600,
     };
 
-$SERIAL_CLASS = $^O eq 'MSWin32' ? 'Win32::Serialport'
+$SERIAL_CLASS = $^O eq 'MSWin32' ? 'Win32::SerialPort'
                                  : 'Device::SerialPort';
 eval "require $SERIAL_CLASS";
 
