@@ -1,6 +1,6 @@
 Device-Firmata
 
-Device::Firmata provides an host side interface to the Firmata protocol for talking to arduino microcontroler platform. See http://firmata.org/wiki/Main_Page for some details.
+Device::Firmata - Perl interface to the Firmata protocol for talking to the arduino microcontroler platform. See http://firmata.org/wiki/Main_Page for more details.
 
 INSTALLATION
 
