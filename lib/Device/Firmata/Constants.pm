@@ -11,7 +11,6 @@ use Exporter;
 use vars qw/
   @ISA @EXPORT_OK %EXPORT_TAGS
   $BASE
-  $DEVICES
   $COMMANDS $COMMAND_NAMES
   $COMMAND_LOOKUP
   /;
@@ -33,8 +32,6 @@ use constant (
     PIN_HIGH => 1,
   }
 );
-
-$DEVICES = { 'arduino_dumilanove' => {}, }; #IS THIS NEEDED?
 
 # We need to apply all the available protocols
 use constant (
