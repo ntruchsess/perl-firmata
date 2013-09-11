@@ -3,3 +3,5 @@ Revision history for Device-Firmata
 0.01    Date/time
         First version, released on an unsuspecting world.
 
+0.51		2013.09.10/23:00 - Brett Carroll
+				Changed IO.pm to use Win32::SerialPort instead of Win32::Serialport on Windows platforms
