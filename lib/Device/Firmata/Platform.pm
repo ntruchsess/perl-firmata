@@ -745,7 +745,7 @@ sub poll {
 
   # --------------------------------------------------
   my $self     = shift;
-  my $buf      = $self->{io}->data_read(512) or return;
+  my $buf      = $self->{io}->data_read(2048) or return;
   my $messages = $self->{protocol}->message_data_receive($buf);
   $self->messages_handle($messages);
   return $messages;
