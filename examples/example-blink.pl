@@ -6,7 +6,7 @@ use Data::Dumper;
 use Device::Firmata::Constants qw/ :all /;
 use Device::Firmata;
 $|++;
-#$Device::Firmata::DEBUG = 1;
+$Device::Firmata::DEBUG = 1;
 use Time::HiRes 'sleep';
 
 my $led_pin = 13;

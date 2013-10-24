@@ -19,7 +19,11 @@ use constant {
 
 my $firmata = Device::Firmata->listen('192.168.0.1',3030);
 
-my $device = $firmata->accept();
+my $device;
+
+do {
+	print "waiting for firmata-client to connect...\n";
+} while(!($device = $firmata->accept(5)));
 
 $device->system_reset();
 $device->probe();
@@ -57,13 +61,13 @@ $device->observe_analog(AD,\&onAnalogMessage);
 
 my $iteration = 0;
 while ($iteration < 20) {
-    my $strobe_state = $iteration++%2;
-    $device->digital_write(OUT,$strobe_state);
+	my $strobe_state = $iteration++%2;
+	$device->digital_write(OUT,$strobe_state);
 	select( undef, undef, undef, 0.5 );
-	$device->poll();
+	$firmata->poll();
 }
 
-$device->close();
+$firmata->close();
 
 sub onDigitalMessage {
 	my ($pin,$old,$new) = @_;

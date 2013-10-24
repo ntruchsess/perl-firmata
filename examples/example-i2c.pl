@@ -10,7 +10,7 @@ $|++;
 
 $Device::Firmata::DEBUG = 0;
 
-my $device = Device::Firmata->open('/dev/ttyUSB0')
+my $device = Device::Firmata->open('/dev/ttyACM0')
   or die "Could not connect to Firmata Server";
 
 $device->system_reset();

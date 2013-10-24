@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use Device::Firmata::Constants qw/ :all /;
 use Device::Firmata;
-#use LiquidCrystal_I2C;
 
 use constant PIN_DHT11 => 0x7e;
 use constant DHT11_DATA => 0x00;

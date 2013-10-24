@@ -3,6 +3,7 @@ package Device::Firmata::IO::NetIO;
 use strict;
 use warnings;
 use IO::Socket::INET;
+use IO::Select;
 
 use vars qw//;
 use Device::Firmata::Base
@@ -30,8 +31,6 @@ sub listen {
 	Listen => 5,
 	Reuse => 1
 	) or die "ERROR in Socket Creation : $!\n";
-	
-	print "SERVER Waiting for client connection on port $port\n";
 
 	$self->{'socket'} = $socket;
 	return $self;
@@ -39,12 +38,43 @@ sub listen {
 
 sub accept {
 	
-	my $self = shift;
+	my ($self,$timeout) = @_;
 	# waiting for new client connection.
-	my $client_socket = $self->{'socket'}->accept();
-	
-	return $self->attach($client_socket) if ($client_socket);
+	my $s = $self->{'select'};
+	if (!($s)) {
+		$s = IO::Select->new();
+		$s->add($self->{'socket'});
+		$self->{'select'} = $s;
+	}
+	if(my @ready = $s->can_read($timeout)) {
+		my $socket = $self->{'socket'};
+		foreach my $fh (@ready) {
+			if ($fh == $socket) {
+				if (my $client_socket = $socket->accept()) {
+					return $self->attach($client_socket);
+				}
+			}
+		}
+	}
 	return undef;
+}
+
+sub close {
+	my $self = shift;
+	if ($self->{'select'} && $self->{'socket'}) {
+		$self->{'select'}->remove($self->{'socket'});
+		delete $self->{'select'};
+	}
+	if ($self->{'socket'}) {
+		$self->{'socket'}->close();
+		delete $self->{'socket'};
+	}
+	if ($self->{clients}) {
+		foreach my $client (@{$self->{clients}}) {
+			$client->close();
+		}
+		delete $self->{clients};
+	}
 }
 
 sub attach {
@@ -52,11 +82,6 @@ sub attach {
 
     my $self = ref $pkg ? $pkg : $pkg->new($opts);
 
-	# get the host and port number of newly connected client.
-	my $peer_address = $client_socket->peerhost();
-	my $peer_port = $client_socket->peerport();
-	print "Attaching new Client Connection From : $peer_address, $peer_port\n ";
-	
 	my $clientpackage = "Device::Firmata::IO::NetIO::Client";
 	eval "require $clientpackage";
 	
@@ -66,10 +91,46 @@ sub attach {
     eval "require $package";
   	my $platform = $package->attach( $clientio, $opts ) or die "Could not connect to Firmata Server";
 
+	my $s = $self->{'select'};
+	if (!($s)) {
+		$s = IO::Select->new();
+		$self->{'select'} = $s;
+	}
+	$s->add($client_socket);
+	my $clients = $self->{clients};
+	if (!($clients)) {
+		$clients = [];
+		$self->{clients} = $clients;
+	}
+	push $clients, $platform;
+
 	# Figure out what platform we're running on
-    $platform->probe;
+    $platform->probe();
 
     return $platform;
+}
+
+sub poll {
+	my ($self,$timeout) = @_;
+	my $s = $self->{'select'};
+	return unless $s;
+	if(my @ready = $s->can_read($timeout)) {
+		my $socket = $self->{'socket'};
+		my $clients = $self->{clients};
+		if (! defined($clients)) {
+			$clients = [];
+			$self->{clients} = $clients;
+		}
+		my @readyclients = ();
+		foreach my $fh (@ready) {
+			if ($fh != $socket) {
+				push @readyclients, grep { $fh == $_->{io}->{client}; } @$clients;
+			}
+		}
+		foreach my $readyclient (@readyclients) {
+			$readyclient->poll();
+		}
+	}
 }
 
 package Device::Firmata::IO::NetIO::Client;
@@ -90,7 +151,7 @@ sub attach {
     my $self = ref $pkg ? $pkg : $pkg->new($opts);
 
     $self->{client} = $client_socket;
-    
+   
     return $self;
 }
 
