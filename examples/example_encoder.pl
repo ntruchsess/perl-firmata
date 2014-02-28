@@ -13,11 +13,13 @@ my $device = Device::Firmata->open('/dev/ttyACM0')
 $device->observe_string( \&onStringMessage, undef );
 $device->observe_encoder(0, \&onEncoderMessage, undef );
 
-$device->sampling_interval(100);
-$device->encoder_attach(0,2,3);
-$device->encoder_report_auto(1);
+$device->sampling_interval(100); # report every 100ms
+$device->encoder_attach(0,2,3);  # attach encoder number 0 to pin 2 and 3
+$device->encoder_report_auto(2); # report only if position has changed (set to 0 to turn of reporting, set to 1 to allways report positions (even unchanged))
 
 while (1) {
+#	$device->encoder_report_position(0); #report encoder 0 (if encoder_report_auto is set to 0)
+#	$device->encoder_report_positions(); #report all encoders (if encoder_report_auto is set to 0)
 	$device->poll();
 	select( undef, undef, undef, 0.1 );
 }

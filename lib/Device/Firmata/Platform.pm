@@ -783,7 +783,7 @@ sub encoder_report_position {
 
 sub encoder_report_positions {
   my ( $self ) = @_;
-  return $self->{io}->data_write($self->{protocol}->packet_encoder_reset_positions());
+  return $self->{io}->data_write($self->{protocol}->packet_encoder_report_positions());
 }
 
 sub encoder_reset_position {
@@ -793,7 +793,7 @@ sub encoder_reset_position {
 
 sub encoder_report_auto {
   my ( $self, $enable ) = @_;
-  return $self->{io}->data_write($self->{protocol}->packet_encoder_report_auto( $enable ? 1 : 0 ));
+  return $self->{io}->data_write($self->{protocol}->packet_encoder_report_auto( $enable ));
 }
 
 sub encoder_detach {
