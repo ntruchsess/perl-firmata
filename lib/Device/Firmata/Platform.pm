@@ -39,7 +39,6 @@ use Device::Firmata::Base
   sysex_observer              => undef,
   i2c_observer                => undef,
   onewire_observer            => [],
-  stepper_observer            => [],
   encoder_observer            => [],
   scheduler_observer          => undef,
   string_observer             => undef,
@@ -87,6 +86,7 @@ sub detach {
   $self->{sysex_observer}     = undef;
   $self->{i2c_observer}       = undef;
   $self->{onewire_observer}   = [];
+  $self->{encoder_observer}   = [];
   $self->{scheduler_observer} = undef;
   $self->{tasks}              = [];
   $self->{metadata}           = {};
@@ -111,6 +111,7 @@ sub system_reset {
   $self->{sysex_observer}     = undef;
   $self->{i2c_observer}       = undef;
   $self->{onewire_observer}   = [];
+  $self->{encoder_observer}   = [];
   $self->{scheduler_observer} = undef;
   $self->{tasks}              = [];
   $self->{metadata}           = {};
