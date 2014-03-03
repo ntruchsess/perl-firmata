@@ -359,7 +359,7 @@ sub sysex_handle {
         my $encoderNum = $encoder_data->{encoderNum};
         my $observer = $self->{encoder_observer}[$encoderNum];
         if (defined $observer) {
-          $observer->{method}( $encoder_data, $observer->{context} );
+          $observer->{method}( $encoderNum, $encoder_data->{value}, $observer->{context} );
         }
       };
       last;

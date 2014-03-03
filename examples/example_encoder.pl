@@ -25,8 +25,8 @@ while (1) {
 }
 
 sub onEncoderMessage {
-	my $data = shift;
-	print "encoder: $data->{encoderNum} $data->{value}\n";
+	my ($encoderNum, $value ) = @_;
+	print "encoder: $encoderNum $value\n";
 }
 
 sub onStringMessage {
