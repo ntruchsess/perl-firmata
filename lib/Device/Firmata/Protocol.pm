@@ -79,9 +79,9 @@ our $STEPPER_COMMANDS = {
 };
 
 our $STEPPER_INTERFACES = {
-  DRIVER                      => 0,
-  TWO_WIRE                    => 1,
-  FOUR_WIRE                   => 2,
+  DRIVER                      => 1,
+  TWO_WIRE                    => 2,
+  FOUR_WIRE                   => 4,
 };
 
 our $ENCODER_COMMANDS = {

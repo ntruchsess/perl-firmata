@@ -13,18 +13,20 @@ my $device = Device::Firmata->open('/dev/ttyACM0')
 $device->observe_string( \&onStringMessage, undef );
 
 my $steps = [
-	[0,100,10],
-	[1,200,20],
-	[0,100,40],
+	[0,1000,5000],
+	[1,500,5000],
+	[0,1000,5000],
+	[1,1500,5000]
 ];
 
 my $stepperContext = { position => 0, progStep => 0, program => $steps };
 
-$device->observe_stepper( \&onStepperMessage, $stepperContext );
+$device->observe_stepper(0, \&onStepperMessage, $stepperContext );
 
-$device->stepper_config(0,'DRIVER',1000,4,5);  #   $stepperNum, $interface, $stepsPerRev, $directionPin, $stepPin,[$motorPin3, $motorPin4] 
+#$device->stepper_config(0,'DRIVER',1000,4,5);  #   $stepperNum, $interface, $stepsPerRev, $directionPin, $stepPin,[$motorPin3, $motorPin4] 
 #$device->stepper_config(0,'TWO_WIRE',1000,4,5);  #   $stepperNum, $interface, $stepsPerRev, $directionPin, $stepPin,[$motorPin3, $motorPin4] 
-#$device->stepper_config(0,'FOUR_WIRE',1000,4,5,6,7);  #   $stepperNum, $interface, $stepsPerRev, $directionPin, $stepPin,[$motorPin3, $motorPin4] 
+$device->stepper_config(0,'FOUR_WIRE',64,8,6,5,7);  #   $stepperNum, $interface, $stepsPerRev, $directionPin, $stepPin,[$motorPin3, $motorPin4] 
+
 
 nextStep($stepperContext,0);
 
