@@ -28,7 +28,10 @@ use Device::Firmata::Base
   analog_resolutions          => {},
   pwm_resolutions             => {},
   servo_resolutions           => {},
+  stepper_resolutions         => {},
+  encoder_resolutions         => {},
   ports                       => [],
+  input_ports                 => [],
   pins                        => {},
   pin_modes                   => {},
   encoders                    => [],
@@ -80,6 +83,7 @@ sub detach {
   $self->{sysex_data}         = [];
   $self->{analog_pins}        = [];
   $self->{ports}              = [];
+  $self->{input_ports}        = [];
   $self->{pins}               = {};
   $self->{pin_modes}          = {};
   $self->{digital_observer}   = [];
@@ -144,7 +148,7 @@ sub messages_handle {
       $command eq 'DIGITAL_MESSAGE' and do {
         my $port_number = $message->{command} & 0x0f;
         my $port_state  = $data->[0] | ( $data->[1] << 7 );
-        my $old_state   = $self->{ports}[$port_number];
+        my $old_state   = $self->{input_ports}[$port_number] ||= 0;
         my $observers = $self->{digital_observer};
         my $pinbase   = $port_number << 3;
         for ( my $i = 0 ; $i < 8 ; $i++ ) {
@@ -154,17 +158,13 @@ sub messages_handle {
             my $pin_mask = 1 << $i;
             $observer->{method}(
               $pin,
-              defined $old_state
-              ? ( $old_state & $pin_mask ) > 0
-                  ? 1
-                  : 0
-              : undef,
+              ( $old_state & $pin_mask ) > 0 ? 1 : 0,
               ( $port_state & $pin_mask ) > 0 ? 1 : 0,
               $observer->{context}
             );
           }
         }
-        $self->{ports}[$port_number] = $port_state;
+        $self->{input_ports}[$port_number] = $port_state;
       };
 
       # Handle analog pin messages
@@ -283,9 +283,11 @@ sub sysex_handle {
           }
           if ($capabilities->{$pin}->{PIN_STEPPER+0}) {
           	push @stepperpins, $pin;
+            $self->{metadata}{stepper_resolutions}{$pin} = $capabilities->{$pin}->{PIN_STEPPER+0}->{resolution};
           }
           if ($capabilities->{$pin}->{PIN_ENCODER+0}) {
           	push @encoderpins, $pin;
+            $self->{metadata}{encoder_resolutions}{$pin} = $capabilities->{$pin}->{PIN_ENCODER+0}->{resolution};
           }
         }
       }
@@ -430,7 +432,7 @@ sub pin_mode {
 
   PIN_MODE_HANDLER: {
 
-    ( $mode == PIN_INPUT or $mode == PIN_OUTPUT ) and do {
+    ( $mode == PIN_INPUT ) and do {
       my $port_number = $pin >> 3;
       $self->{io}->data_write($self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode ));
       $self->{io}->data_write($self->{protocol}->message_prepare( REPORT_DIGITAL => $port_number, 1 ));
@@ -493,7 +495,7 @@ sub digital_read {
   my $port_number = $pin >> 3;
   my $pin_offset  = $pin % 8;
   my $pin_mask    = 1 << $pin_offset;
-  my $port_state  = $self->{ports}[$port_number] ||= 0;
+  my $port_state  = $self->{input_ports}[$port_number] ||= 0;
   return ( $port_state & $pin_mask ? 1 : 0 );
 }
 
