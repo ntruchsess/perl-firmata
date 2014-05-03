@@ -46,6 +46,7 @@ use Device::Firmata::Base
   encoder_observer            => [],
   scheduler_observer          => undef,
   string_observer             => undef,
+  rc_observer                 => [],
 
   # To track scheduled tasks
   tasks                       => [],
@@ -94,6 +95,7 @@ sub detach {
   $self->{stepper_observer}   = [];
   $self->{encoder_observer}   = [];
   $self->{scheduler_observer} = undef;
+  $self->{rc_observer}        = [];
   $self->{tasks}              = [];
   $self->{metadata}           = {};
 }
@@ -120,6 +122,7 @@ sub system_reset {
   $self->{stepper_observer}   = [];
   $self->{encoder_observer}   = [];
   $self->{scheduler_observer} = undef;
+  $self->{rc_observer}        = [];
   $self->{tasks}              = [];
   $self->{metadata}           = {};
 }
@@ -251,6 +254,7 @@ sub sysex_handle {
       my @onewirepins;
       my @stepperpins;
       my @encoderpins;
+      my @rcoutputpins;
       
       foreach my $pin (keys %$capabilities) {
         if (defined $capabilities->{$pin}) {
@@ -289,6 +293,9 @@ sub sysex_handle {
           	push @encoderpins, $pin;
             $self->{metadata}{encoder_resolutions}{$pin} = $capabilities->{$pin}->{PIN_ENCODER+0}->{resolution};
           }
+          if ($capabilities->{$pin}->{PIN_RCOUTPUT+0}) {
+          	push @rcoutputpins, $pin;
+          }
         }
       }
       $self->{metadata}{input_pins}   = \@inputpins;
@@ -301,6 +308,7 @@ sub sysex_handle {
       $self->{metadata}{onewire_pins} = \@onewirepins;
       $self->{metadata}{stepper_pins} = \@stepperpins;
       $self->{metadata}{encoder_pins} = \@encoderpins;
+      $self->{metadata}{rcoutput_pins} = \@rcoutputpins;
       last;
     };
 
@@ -371,6 +379,15 @@ sub sysex_handle {
           $observer->{method}( $encoderNum, $encoder_data->{value}, $observer->{context} );
         }
       };
+      last;
+    };
+
+    $sysex_message->{command_str} eq 'RC_DATA' and do {
+      my $pin      = $data->{pin};
+      my $observer = $self->{rc_observer}[$pin];
+      if (defined $observer) {
+        $observer->{method}( $data->{command}, $data->{value}, $observer->{context} );
+      }
       last;
     };
   }
@@ -825,6 +842,17 @@ sub encoder_detach {
   return $self->{io}->data_write($self->{protocol}->packet_encoder_detach( $encoderNum ));
 }
 
+sub rcoutput_send_code_tristate {
+  my ( $self, $pin, @code ) = @_;
+  return $self->{io}->data_write($self->{protocol}->packet_rcoutput_code_tristate( $pin, @code ));
+}
+
+sub rcoutput_set_parameter {
+  my ( $self, $pin, $parameter, $value ) = @_;
+  return $self->{io}->data_write($self->{protocol}->packet_rcoutput_parameter( $pin, $parameter, $value ));
+}
+
+
 =head2 poll
 
 Call this function every once in a while to
@@ -930,6 +958,16 @@ sub observe_string {
       method  => $observer,
       context => $context,
     };
+  return 1;
+}
+
+sub observe_rc {
+  my ( $self, $pin, $observer, $context ) = @_;
+  die "Unsupported mode 'RCOUTPUT' for pin '".$pin."'" unless ($self->is_supported_mode($pin,PIN_RCOUTPUT));
+  $self->{rc_observer}[$pin] =  {
+      method  => $observer,
+      context => $context,
+  };
   return 1;
 }
 
