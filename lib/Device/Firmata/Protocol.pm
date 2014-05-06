@@ -1045,8 +1045,8 @@ sub packet_rcoutput_code_tristate {
   }
 
   return $self->packet_sysex_command( 'RC_DATA',
-                                      $pin,
                                       $RCOUTPUT_COMMANDS->{RCOUTPUT_CODE_TRISTATE},
+                                      $pin,
                                       pack_as_7bit(@transferCode)
                                     );
 }
@@ -1062,8 +1062,8 @@ sub packet_rcoutput_parameter {
   my ( $self, $pin, $name, $value ) = @_;
   my @message_bytes = ($value & 0xFF, ($value>>8) & 0xFF);
   return $self->packet_sysex_command( 'RC_DATA',
-                                      $pin,
                                       $name,
+                                      $pin,
                                       pack_as_7bit(@message_bytes) );
 }
 
@@ -1075,8 +1075,8 @@ sub packet_rcoutput_parameter {
 #  value: data from the microcontroller
 sub handle_rc_response {
   my ( $self, $sysex_data ) = @_;
-  my $pin     = shift @$sysex_data;
   my $command = shift @$sysex_data;
+  my $pin     = shift @$sysex_data;
   my @value  = unpack_from_7bit(@$sysex_data);
   if ($command eq $RCOUTPUT_COMMANDS->{RCOUTPUT_CODE_TRISTATE}) {
     # unpack tristates bits:
@@ -1090,7 +1090,7 @@ sub handle_rc_response {
       }
     }
   }
-  return { pin => $pin, command => $command, value => \@value };
+  return { command => $command, pin => $pin, value => \@value };
 }
 
 # extract tristate bit from byte (containing 4 tristate bits)
