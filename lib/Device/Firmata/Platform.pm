@@ -255,6 +255,7 @@ sub sysex_handle {
       my @stepperpins;
       my @encoderpins;
       my @rcoutputpins;
+      my @rcinputpins;
       
       foreach my $pin (keys %$capabilities) {
         if (defined $capabilities->{$pin}) {
@@ -296,19 +297,23 @@ sub sysex_handle {
           if ($capabilities->{$pin}->{PIN_RCOUTPUT+0}) {
           	push @rcoutputpins, $pin;
           }
+          if ($capabilities->{$pin}->{PIN_RCINPUT+0}) {
+          	push @rcinputpins, $pin;
+          }
         }
       }
-      $self->{metadata}{input_pins}   = \@inputpins;
-      $self->{metadata}{output_pins}  = \@outputpins;
-      $self->{metadata}{analog_pins}  = \@analogpins;
-      $self->{metadata}{pwm_pins}     = \@pwmpins;
-      $self->{metadata}{servo_pins}   = \@servopins;
-      $self->{metadata}{shift_pins}   = \@shiftpins;
-      $self->{metadata}{i2c_pins}     = \@i2cpins;
-      $self->{metadata}{onewire_pins} = \@onewirepins;
-      $self->{metadata}{stepper_pins} = \@stepperpins;
-      $self->{metadata}{encoder_pins} = \@encoderpins;
+      $self->{metadata}{input_pins}    = \@inputpins;
+      $self->{metadata}{output_pins}   = \@outputpins;
+      $self->{metadata}{analog_pins}   = \@analogpins;
+      $self->{metadata}{pwm_pins}      = \@pwmpins;
+      $self->{metadata}{servo_pins}    = \@servopins;
+      $self->{metadata}{shift_pins}    = \@shiftpins;
+      $self->{metadata}{i2c_pins}      = \@i2cpins;
+      $self->{metadata}{onewire_pins}  = \@onewirepins;
+      $self->{metadata}{stepper_pins}  = \@stepperpins;
+      $self->{metadata}{encoder_pins}  = \@encoderpins;
       $self->{metadata}{rcoutput_pins} = \@rcoutputpins;
+      $self->{metadata}{rcinput_pins}  = \@rcinputpins;
       last;
     };
 
@@ -847,11 +852,10 @@ sub rcoutput_send_code_tristate {
   return $self->{io}->data_write($self->{protocol}->packet_rcoutput_code_tristate( $pin, @code ));
 }
 
-sub rcoutput_set_parameter {
+sub rc_set_parameter {
   my ( $self, $pin, $parameter, $value ) = @_;
-  return $self->{io}->data_write($self->{protocol}->packet_rcoutput_parameter( $pin, $parameter, $value ));
+  return $self->{io}->data_write($self->{protocol}->packet_rc_parameter( $pin, $parameter, $value ));
 }
-
 
 =head2 poll
 
@@ -963,7 +967,6 @@ sub observe_string {
 
 sub observe_rc {
   my ( $self, $pin, $observer, $context ) = @_;
-  die "Unsupported mode 'RCOUTPUT' for pin '".$pin."'" unless ($self->is_supported_mode($pin,PIN_RCOUTPUT));
   $self->{rc_observer}[$pin] =  {
       method  => $observer,
       context => $context,
