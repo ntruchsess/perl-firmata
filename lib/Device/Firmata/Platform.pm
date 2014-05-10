@@ -847,9 +847,9 @@ sub encoder_detach {
   return $self->{io}->data_write($self->{protocol}->packet_encoder_detach( $encoderNum ));
 }
 
-sub rcoutput_send_code_tristate {
-  my ( $self, $pin, @code ) = @_;
-  return $self->{io}->data_write($self->{protocol}->packet_rcoutput_code_tristate( $pin, @code ));
+sub rcoutput_send_code {
+  my ( $self, $subcommand, $pin, @code ) = @_;
+  return $self->{io}->data_write($self->{protocol}->packet_rcoutput_code( $subcommand, $pin, @code ));
 }
 
 sub rc_set_parameter {
