@@ -106,6 +106,7 @@ our $RCOUTPUT_COMMANDS = {
 
 our $RCINPUT_COMMANDS = {
   RCINPUT_TOLERANCE           => 0x31,
+  RCINPUT_RAW_DATA            => 0x32,
   RCINPUT_MESSAGE             => 0x41,
 };
 
@@ -1028,13 +1029,13 @@ sub handle_encoder_response {
   return \@retval;
 }
 
-# Packet to send a tristate code to the microcontroller
+# Packet to send a RC code to the microcontroller
 #
 # Content:
 #  0: command 'RC_DATA'
-#  1: pin
-#  2: subcommand 
-#  3..n: tristate code (4 tristate bits per byte, packed as 7-bit)
+#  1: subcommand 
+#  2: pin
+#  3..n: code (format depending on subcommand)
 sub packet_rcoutput_code {
   my ( $self, $subcommand, $pin, @code ) = @_;
   
@@ -1059,13 +1060,13 @@ sub packet_rcoutput_code {
            set_tristate_bit(pop(@transferCode), $i, $transferSymbols[$i]);
     }
   } elsif ($subcommand eq $RCOUTPUT_COMMANDS->{RCOUTPUT_CODE_LONG}) {
-    my ($bitlength, $message) = @code;
-    push @transferCode, (($bitlength >> 0) & 0xFF,
-                         ($bitlength >> 8) & 0xFF);
-    push @transferCode, (($message >>  0) & 0xFF,
-                         ($message >>  8) & 0xFF,
-                         ($message >> 16) & 0xFF,
-                         ($message >> 24) & 0xFF
+    my ($bitCount, $longCode) = @code;
+    push @transferCode, (($bitCount >> 0) & 0xFF,
+                         ($bitCount >> 8) & 0xFF);
+    push @transferCode, (($longCode >>  0) & 0xFF,
+                         ($longCode >>  8) & 0xFF,
+                         ($longCode >> 16) & 0xFF,
+                         ($longCode >> 24) & 0xFF
                         );
   } elsif ($subcommand eq $RCOUTPUT_COMMANDS->{RCOUTPUT_CODE_CHAR}) {
     push @transferCode, @code;
@@ -1081,80 +1082,91 @@ sub packet_rcoutput_code {
                                     );
 }
 
-# Packet to change a parameter of a RC sender
+# Packet to change a parameter of a RC sender or receiver
 #
 # Content:
 #  0: command 'RC_DATA'
-#  1: pin
-#  2: subcommand, one of $RCOUTPUT_COMMANDS
+#  1: subcommand
+#  2: pin
 #  3, 4: an int as value for the parameter
 sub packet_rc_parameter {
-  my ( $self, $pin, $name, $value ) = @_;
-  my @message_bytes = ($value & 0xFF, ($value>>8) & 0xFF);
+  my ( $self, $subcommand, $pin, $value ) = @_;
+  my @data = ($value & 0xFF, ($value>>8) & 0xFF);
   return $self->packet_sysex_command( 'RC_DATA',
-                                      $name,
+                                      $subcommand,
                                       $pin,
-                                      pack_as_7bit(@message_bytes) );
+                                      pack_as_7bit(@data) );
 }
 
 # Processes a message from the microcontroller
 #
 # Content:
 #  pin: RC pin
-#  command: one of $RCOUTPUT_COMMANDS
-#  value: data from the microcontroller
+#  command: one of $RCOUTPUT_COMMANDS or $RCINPUT_COMMANDS
+#  data: data from the microcontroller
 sub handle_rc_response {
   my ( $self, $sysex_data ) = @_;
   my $command = shift @$sysex_data;
   my $pin     = shift @$sysex_data;
-  my @value  = unpack_from_7bit(@$sysex_data);
+  my @data  = unpack_from_7bit(@$sysex_data);
 
   if ($command eq $RCOUTPUT_COMMANDS->{RCOUTPUT_CODE_PACKED_TRISTATE}) {
     # unpack tristates bits:
     # the microcontroller sends 4 tristate bits per byte,
     # the result will contain a list of tristate bits
     # (from $RC_TRISTATE_BITS)
-    foreach (0..@value-1) {
-      my $byte = shift @value;
+    foreach (0..@data-1) {
+      my $byte = shift @data;
       foreach (0..3) {
-        push @value, get_tristate_bit($byte, $_);
+        push @data, get_tristate_bit($byte, $_);
       }
     }
-    my $tristateCode = join("", map { my $v = $RC_TRISTATE_CHARS->{$_}; defined $v ? $v : "X";} @value); 
-    @value = ($tristateCode);
-    
+    my $tristateCode = join("", map {
+                                      my $v = $RC_TRISTATE_CHARS->{$_};
+                                      defined $v ? $v : "X";
+                                    } @data);
+    @data = ($tristateCode);
+
   } elsif ($command eq $RCOUTPUT_COMMANDS->{RCOUTPUT_CODE_LONG}) {
-    push @value, (shift @value) + ((shift @value) << 8);
-    push @value, (shift @value) + ((shift @value) << 8)
-               + ((shift @value) << 16) + ((shift @value) << 24);
+    push @data, (shift @data) + ((shift @data) << 8);
+    push @data, (shift @data) + ((shift @data) << 8)
+               + ((shift @data) << 16) + ((shift @data) << 24);
+
   } elsif ($command eq $RCOUTPUT_COMMANDS->{RCOUTPUT_CODE_CHAR}) {
-    my $charCode = join("", map { chr($_); } @value);
-    @value = ($charCode);
+    my $charCode = join("", map { chr($_); } @data);
+    @data = ($charCode);
+
   } elsif ($command eq $RCINPUT_COMMANDS->{RCINPUT_MESSAGE}) {
-    my $message   = ((shift @value) << 24) + ((shift @value) << 16)
-                  + ((shift @value) <<  8) + (shift @value);
-    my $bitlength = ((shift @value) <<  8) + (shift @value);
-    my $delay     = ((shift @value) <<  8) + (shift @value);
-    my $protocol  = ((shift @value) <<  8) + (shift @value);
-    my $tristateCode = long_to_tristate_code($message, $bitlength); 
-    push @value, ($message, $bitlength, $delay, $protocol, $tristateCode);
+    my $value   = ((shift @data) << 24) + ((shift @data) << 16)
+                  + ((shift @data) <<  8) + (shift @data);
+    my $bitCount  = ((shift @data) <<  8) + (shift @data);
+    my $delay     = ((shift @data) <<  8) + (shift @data);
+    my $protocol  = ((shift @data) <<  8) + (shift @data);
+    my $tristateCode = long_to_tristate_code($value, $bitCount);
+    my @rawData = ();
+    while (@data > 1) {
+      push @rawData, (shift @data) + ((shift @data) << 8);
+    }
+    @data = ($value, $bitCount, $delay, $protocol, $tristateCode, \@rawData);
+
   } else { # parameter as int
-      push @value, (shift @value) + ((shift @value) << 8);
+      push @data, (shift @data) + ((shift @data) << 8);
   }
-  return { command => $command, pin => $pin, value => \@value };
+  return { command => $command, pin => $pin, data => \@data };
 }
 
-sub long_to_tristate_code
-{
-  my ($message, $bitlength) = @_;
-  my @messageAsTristateBits;
-  for (my $shift = $bitlength-2; $shift >= 0; $shift-=2) {
-    push @messageAsTristateBits, ($message >> $shift) & 3;
+sub long_to_tristate_code {
+  my ($value, $bitCount) = @_;
+  my @tristateBits;
+  for (my $shift = $bitCount-2; $shift >= 0; $shift-=2) {
+    push @tristateBits, ($value >> $shift) & 3;
   }
-  my $tristateCode = join("", map { my $v = $RC_TRISTATE_CHARS->{$_}; defined $v ? $v : "X";} @messageAsTristateBits);
+  my $tristateCode = join("", map {
+                                    my $v = $RC_TRISTATE_CHARS->{$_};
+                                    defined $v ? $v : "X";
+                                  } @tristateBits);
   return $tristateCode;
 }
-
 
 # extract tristate bit from byte (containing 4 tristate bits)
 sub get_tristate_bit {

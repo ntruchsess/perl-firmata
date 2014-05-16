@@ -391,7 +391,7 @@ sub sysex_handle {
       my $pin      = $data->{pin};
       my $observer = $self->{rc_observer}[$pin];
       if (defined $observer) {
-        $observer->{method}( $data->{command}, $data->{value}, $observer->{context} );
+        $observer->{method}( $data->{command}, $data->{data}, $observer->{context} );
       }
       last;
     };
@@ -848,13 +848,13 @@ sub encoder_detach {
 }
 
 sub rcoutput_send_code {
-  my ( $self, $subcommand, $pin, @code ) = @_;
-  return $self->{io}->data_write($self->{protocol}->packet_rcoutput_code( $subcommand, $pin, @code ));
+  my ( $self, $sendCommand, $pin, @code ) = @_;
+  return $self->{io}->data_write($self->{protocol}->packet_rcoutput_code( $sendCommand, $pin, @code ));
 }
 
 sub rc_set_parameter {
-  my ( $self, $pin, $parameter, $value ) = @_;
-  return $self->{io}->data_write($self->{protocol}->packet_rc_parameter( $pin, $parameter, $value ));
+  my ( $self, $parameter, $pin, $value ) = @_;
+  return $self->{io}->data_write($self->{protocol}->packet_rc_parameter( $parameter, $pin, $value ));
 }
 
 =head2 poll
