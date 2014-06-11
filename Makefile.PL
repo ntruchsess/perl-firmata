@@ -4,7 +4,7 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
     NAME                => 'Device::Firmata',
-    AUTHOR              => q{amimato <amimoto>},
+    AUTHOR              => q{amimato <amimoto>, ntruchsess <Norbert Truchsess>},
     VERSION_FROM        => 'lib/Device/Firmata.pm',
     ABSTRACT_FROM       => 'lib/Device/Firmata.pm',
     ($ExtUtils::MakeMaker::VERSION >= 6.3002
