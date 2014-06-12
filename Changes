@@ -1,7 +1,35 @@
 Revision history for Device-Firmata
 
-0.01    Date/time
-        First version, released on an unsuspecting world.
+0.50    2010.08.31-2011.02.16 - Aki Mimoto
+        implementig all protocol basics and releasing Device::Firmata on Github
+        
+        2011.03.23 - Chris Fedde
+        reorganizing as CPAN ready module
+        
+        2012.12.13-2013.08.11 - Norbert Truchsess
+        adding all missing protocol-features (1-Wire, I2C, Servo ...)
+        adding observers for all suitable protocols
+        
+        Valdas Kondrotas: various bugfixes and enhancements.
 
-0.51		2013.09.10/23:00 - Brett Carroll
-				Changed IO.pm to use Win32::SerialPort instead of Win32::Serialport on Windows platforms
+0.51    2013.09.10/23:00 - Brett Carroll
+        Changed IO.pm to use Win32::SerialPort instead of Win32::Serialport on Windows platforms
+        Norbert Truchsess: fix handle onewire in capability-response
+
+0.52    2013.11.22 - Norbert Truchsess
+        add Firmata over Ethernet
+
+0.53    2014.03.03 - Norbert Truchsess
+        add rotary-encoder protocol
+
+0.54    2014.03.04 - Norbert Truchsess
+        add stepper-motor protocol
+
+0.55    2014.04.17 - Norbert Truchsess
+        fix digital-input message interference with output pins on same port
+
+0.56    2014.06.04 - Norbert Truchsess
+        add generic method sysex_send to Platform.pl
+
+0.57    2014.06.12 - Norbert Truchsess
+        Fixed building dist for cpan
