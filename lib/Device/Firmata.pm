@@ -15,11 +15,11 @@ Device::Firmata - Perl interface to Firmata for the arduino platform.
 
 =head1 VERSION
 
-Version 0.58
+Version 0.59
 
 =cut
 
-our $VERSION = '0.58';
+our $VERSION = '0.59';
 our $DEBUG = 0;
 
 

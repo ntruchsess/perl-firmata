@@ -37,3 +37,5 @@ Revision history for Device-Firmata
 0.58    2014.06.26 - Yanick Champoux
         cosmetic change to POD for CPAN
         
+0.59    2014.06.26 - Norbert Truchsess
+        Fix a bug in the parser incorrectly skipping single 0x30 bytes
