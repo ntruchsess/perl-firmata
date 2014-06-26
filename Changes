@@ -33,3 +33,7 @@ Revision history for Device-Firmata
 
 0.57    2014.06.12 - Norbert Truchsess
         Fixed building dist for cpan
+        
+0.58    2014.06.26 - Yanick Champoux
+        cosmetic change to POD for CPAN
+        
