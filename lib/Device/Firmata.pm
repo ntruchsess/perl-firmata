@@ -83,7 +83,7 @@ sub listen {
   my $netio = "Device::Firmata::IO::NetIO";
   eval "require $netio";
 
-  return $netio->listen( $ip, $port, $opts ) or die "Could not bind to socket";
+  return $netio->listen( $ip, $port, $opts ) || die "Could not bind to socket";
 }
 
 1;
