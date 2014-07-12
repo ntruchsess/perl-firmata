@@ -46,6 +46,7 @@ use Device::Firmata::Base
   encoder_observer            => [],
   scheduler_observer          => undef,
   string_observer             => undef,
+  rc_observer                 => [],
 
   # To track scheduled tasks
   tasks                       => [],
@@ -94,6 +95,7 @@ sub detach {
   $self->{stepper_observer}   = [];
   $self->{encoder_observer}   = [];
   $self->{scheduler_observer} = undef;
+  $self->{rc_observer}        = [];
   $self->{tasks}              = [];
   $self->{metadata}           = {};
 }
@@ -120,6 +122,7 @@ sub system_reset {
   $self->{stepper_observer}   = [];
   $self->{encoder_observer}   = [];
   $self->{scheduler_observer} = undef;
+  $self->{rc_observer}        = [];
   $self->{tasks}              = [];
   $self->{metadata}           = {};
 }
@@ -251,6 +254,8 @@ sub sysex_handle {
       my @onewirepins;
       my @stepperpins;
       my @encoderpins;
+      my @rcoutputpins;
+      my @rcinputpins;
       
       foreach my $pin (keys %$capabilities) {
         if (defined $capabilities->{$pin}) {
@@ -289,18 +294,26 @@ sub sysex_handle {
           	push @encoderpins, $pin;
             $self->{metadata}{encoder_resolutions}{$pin} = $capabilities->{$pin}->{PIN_ENCODER+0}->{resolution};
           }
+          if ($capabilities->{$pin}->{PIN_RCOUTPUT+0}) {
+          	push @rcoutputpins, $pin;
+          }
+          if ($capabilities->{$pin}->{PIN_RCINPUT+0}) {
+          	push @rcinputpins, $pin;
+          }
         }
       }
-      $self->{metadata}{input_pins}   = \@inputpins;
-      $self->{metadata}{output_pins}  = \@outputpins;
-      $self->{metadata}{analog_pins}  = \@analogpins;
-      $self->{metadata}{pwm_pins}     = \@pwmpins;
-      $self->{metadata}{servo_pins}   = \@servopins;
-      $self->{metadata}{shift_pins}   = \@shiftpins;
-      $self->{metadata}{i2c_pins}     = \@i2cpins;
-      $self->{metadata}{onewire_pins} = \@onewirepins;
-      $self->{metadata}{stepper_pins} = \@stepperpins;
-      $self->{metadata}{encoder_pins} = \@encoderpins;
+      $self->{metadata}{input_pins}    = \@inputpins;
+      $self->{metadata}{output_pins}   = \@outputpins;
+      $self->{metadata}{analog_pins}   = \@analogpins;
+      $self->{metadata}{pwm_pins}      = \@pwmpins;
+      $self->{metadata}{servo_pins}    = \@servopins;
+      $self->{metadata}{shift_pins}    = \@shiftpins;
+      $self->{metadata}{i2c_pins}      = \@i2cpins;
+      $self->{metadata}{onewire_pins}  = \@onewirepins;
+      $self->{metadata}{stepper_pins}  = \@stepperpins;
+      $self->{metadata}{encoder_pins}  = \@encoderpins;
+      $self->{metadata}{rcoutput_pins} = \@rcoutputpins;
+      $self->{metadata}{rcinput_pins}  = \@rcinputpins;
       last;
     };
 
@@ -371,6 +384,15 @@ sub sysex_handle {
           $observer->{method}( $encoderNum, $encoder_data->{value}, $observer->{context} );
         }
       };
+      last;
+    };
+
+    $sysex_message->{command_str} eq 'RC_DATA' and do {
+      my $pin      = $data->{pin};
+      my $observer = $self->{rc_observer}[$pin];
+      if (defined $observer) {
+        $observer->{method}( $data->{command}, $data->{data}, $observer->{context} );
+      }
       last;
     };
   }
@@ -831,6 +853,16 @@ sub encoder_detach {
   return $self->{io}->data_write($self->{protocol}->packet_encoder_detach( $encoderNum ));
 }
 
+sub rcoutput_send_code {
+  my ( $self, $sendCommand, $pin, @code ) = @_;
+  return $self->{io}->data_write($self->{protocol}->packet_rcoutput_code( $sendCommand, $pin, @code ));
+}
+
+sub rc_set_parameter {
+  my ( $self, $parameter, $pin, $value ) = @_;
+  return $self->{io}->data_write($self->{protocol}->packet_rc_parameter( $parameter, $pin, $value ));
+}
+
 =head2 poll
 
 Call this function every once in a while to
@@ -936,6 +968,15 @@ sub observe_string {
       method  => $observer,
       context => $context,
     };
+  return 1;
+}
+
+sub observe_rc {
+  my ( $self, $pin, $observer, $context ) = @_;
+  $self->{rc_observer}[$pin] =  {
+      method  => $observer,
+      context => $context,
+  };
   return 1;
 }
 
