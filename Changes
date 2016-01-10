@@ -1,5 +1,11 @@
 Revision history for Device-Firmata
 
+0.61    2016.01.09 - Jens Beyer
+        added serial pin support (Platform, Protocol, Constants)
+        added protocol version query (Platform)
+        fixed messages_handle: REPORT_VERSION returns protocol version (Platform)
+        added method get_max_compatible_protocol_version (Protocol)
+
 0.60    2014.06.28 - Norbert Truchsess
         Fixed formating of Firmata.pm as Windows line-endings break automatic install from CPAN
 
