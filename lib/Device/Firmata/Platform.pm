@@ -867,6 +867,9 @@ sub serial_write {
 
 sub serial_read {
   my ( $self, $port, $numbytes ) = @_;
+  if ($port >= 8) {
+    $self->{io}->data_write($self->{protocol}->packet_serial_listen( $port ));
+  }
   return $self->{io}->data_write($self->{protocol}->packet_serial_read( $port, 0x00, $numbytes ));
 }
 
@@ -876,8 +879,8 @@ sub serial_stopreading {
 }
 
 sub serial_config {
-  my ( $self, $port, $baud ) = @_;
-  return $self->{io}->data_write($self->{protocol}->packet_serial_config( $port, $baud ));
+  my ( $self, $port, $baud, $rxPin, $txPin ) = @_;
+  return $self->{io}->data_write($self->{protocol}->packet_serial_config( $port, $baud, $rxPin, $txPin ));
 }
 
 =head2 poll
