@@ -1,5 +1,8 @@
 Revision history for Device-Firmata
 
+0.63    2016.03.19 - Jens Beyer
+        supported protocol version detection modified (Protocol)
+        
 0.62    2016.02.22 - Jens Beyer
         added software serial support (Platform, Protocol)
         
