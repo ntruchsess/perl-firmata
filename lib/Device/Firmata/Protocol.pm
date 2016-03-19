@@ -436,7 +436,11 @@ sub packet_query_version {
 }
 
 sub handle_query_version_response {
-
+  my ( $self, $data ) = @_;
+  return {
+      major_version => shift @$data,
+      minor_version => shift @$data,
+    };
 }
 
 sub handle_string_data {
@@ -1288,13 +1292,13 @@ Search list of implemented protocols for identical or next lower version.
 
 sub get_max_supported_protocol_version {
   my ( $self, $deviceProtcolVersion ) = @_;
-  return "" unless (defined($deviceProtcolVersion));
-  return $deviceProtcolVersion if (defined($COMMANDS->{$deviceProtcolVersion}));
+  return "V_2_01" unless (defined($deviceProtcolVersion));                       # min. supported protocol version if undefined
+  return $deviceProtcolVersion if (defined($COMMANDS->{$deviceProtcolVersion})); # requested version if known
   
   my $maxSupportedProtocolVersion = undef;
   foreach my $protocolVersion (sort keys %{$COMMANDS}) {
     if ($protocolVersion lt $deviceProtcolVersion) {
-      $maxSupportedProtocolVersion = $protocolVersion;
+      $maxSupportedProtocolVersion = $protocolVersion;                           # nearest lower version if not known
     }
   }
   
