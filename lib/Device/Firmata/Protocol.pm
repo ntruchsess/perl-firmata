@@ -99,6 +99,7 @@ our $SERIAL_COMMANDS = {
   SERIAL_WRITE             => 0x20, # write to serial port
   SERIAL_READ              => 0x30, # read request to serial port
   SERIAL_REPLY             => 0x40, # read reply from serial port
+  SERIAL_LISTEN            => 0x70, # start listening on software serial port
 };
 
 our $MODENAMES = {
@@ -435,7 +436,11 @@ sub packet_query_version {
 }
 
 sub handle_query_version_response {
-
+  my ( $self, $data ) = @_;
+  return {
+      major_version => shift @$data,
+      minor_version => shift @$data,
+    };
 }
 
 sub handle_string_data {
@@ -1034,18 +1039,44 @@ sub handle_encoder_response {
 # * 3  baud             (bits 0 - 6)
 # * 4  baud             (bits 7 - 13)
 # * 5  baud             (bits 14 - 20) // need to send 3 bytes for baud even if value is < 14 bits
-# * 6  rxPin            (0-127) [optional] // only set if platform requires RX pin number @TODO
-# * 7  txPin            (0-127) [optional] // only set if platform requires TX pin number @TODO
+# * 6  rxPin            (0-127) [optional] // only set if platform requires RX pin number
+# * 7  txPin            (0-127) [optional] // only set if platform requires TX pin number
 # * 6|8 END_SYSEX       (0xF7)
 # */
 
 sub packet_serial_config {
-  my ( $self, $port, $baud ) = @_;
+  my ( $self, $port, $baud, $rxPin, $txPin ) = @_;
+  if (defined($rxPin) && defined($txPin)) {
+    return $self->packet_sysex_command( SERIAL_DATA,
+      $SERIAL_COMMANDS->{SERIAL_CONFIG} | $port,
+      $baud & 0x7f,
+      ($baud >> 7) & 0x7f,
+      ($baud >> 14) & 0x7f,
+      $rxPin & 0x7f,
+      $txPin & 0x7f
+    );
+  } else {  
+    return $self->packet_sysex_command( SERIAL_DATA,
+      $SERIAL_COMMANDS->{SERIAL_CONFIG} | $port,
+      $baud & 0x7f,
+      ($baud >> 7) & 0x7f,
+      ($baud >> 14) & 0x7f
+    );
+  }
+}
+
+#/* serial listen
+# * -------------------------------
+# * 0  START_SYSEX      (0xF0)
+# * 1  SERIAL_DATA      (0x60)  // command byte
+# * 2  SERIAL_LISTEN    (0x70)  // OR with port to switch to (0x79 = switch to SW_SERIAL1)
+# * 3  END_SYSEX        (0xF7)
+# */
+
+sub packet_serial_listen {
+  my ( $self, $port ) = @_;
   return $self->packet_sysex_command( SERIAL_DATA,
-    $SERIAL_COMMANDS->{SERIAL_CONFIG} | $port,
-    $baud & 0x7f,
-    ($baud >> 7) & 0x7f,
-    ($baud >> 14) & 0x7f
+    $SERIAL_COMMANDS->{SERIAL_LISTEN} | $port
   );
 }
 
@@ -1261,13 +1292,13 @@ Search list of implemented protocols for identical or next lower version.
 
 sub get_max_supported_protocol_version {
   my ( $self, $deviceProtcolVersion ) = @_;
-  return "" unless (defined($deviceProtcolVersion));
-  return $deviceProtcolVersion if (defined($COMMANDS->{$deviceProtcolVersion}));
+  return "V_2_01" unless (defined($deviceProtcolVersion));                       # min. supported protocol version if undefined
+  return $deviceProtcolVersion if (defined($COMMANDS->{$deviceProtcolVersion})); # requested version if known
   
   my $maxSupportedProtocolVersion = undef;
   foreach my $protocolVersion (sort keys %{$COMMANDS}) {
     if ($protocolVersion lt $deviceProtcolVersion) {
-      $maxSupportedProtocolVersion = $protocolVersion;
+      $maxSupportedProtocolVersion = $protocolVersion;                           # nearest lower version if not known
     }
   }
   
