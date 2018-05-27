@@ -5,7 +5,7 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
     NAME                => 'Device::Firmata',
-    AUTHOR              => q{Norbert Truchsess <ntruchses@cpan.org>, amimato <amimoto>},
+    AUTHOR              => q{amimato <amimoto>, Norbert Truchsess <ntruchses@cpan.org>, Jens Beyer <jnsbyr@cpan.org>},
     VERSION_FROM        => 'lib/Device/Firmata.pm',
     ABSTRACT_FROM       => 'lib/Device/Firmata.pm',
     ($ExtUtils::MakeMaker::VERSION >= 6.3002
@@ -19,7 +19,8 @@ WriteMakefile(
     BUILD_REQUIRES      => {
         'Test::More' => 0,
     },
-    PREREQ_PM => {
+    PREREQ_PM => {    
+        'Device::SerialPort' => 0,
         'Test::More' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
