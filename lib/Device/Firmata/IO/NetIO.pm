@@ -19,9 +19,9 @@ sub listen {
 
 	# flush after every write
 	$| = 1;
-	
+
 	my $socket;
-		
+
 	# creating object interface of IO::Socket::INET modules which internally does
 	# socket creation, binding and listening at the specified port address.
 	$socket = new IO::Socket::INET (
@@ -37,7 +37,7 @@ sub listen {
 }
 
 sub accept {
-	
+
 	my ($self,$timeout) = @_;
 	# waiting for new client connection.
 	my $s = $self->{'select'};
@@ -84,9 +84,9 @@ sub attach {
 
 	my $clientpackage = "Device::Firmata::IO::NetIO::Client";
 	eval "require $clientpackage";
-	
+
 	my $clientio = $clientpackage->attach($client_socket);
-	
+
     my $package = "Device::Firmata::Platform";
     eval "require $package";
   	my $platform = $package->attach( $clientio, $opts ) or die "Could not connect to Firmata Server";
@@ -151,7 +151,7 @@ sub attach {
     my $self = ref $pkg ? $pkg : $pkg->new($opts);
 
     $self->{client} = $client_socket;
-   
+
     return $self;
 }
 
@@ -182,7 +182,7 @@ sub data_read {
 	my ($buf, $res);
 	$res = $self->{client}->sysread($buf, 512);
     $buf = "" if(!defined($res));
-    
+
     if ( $Device::Firmata::DEBUG and $buf ) {
         print "<".join(",",map{sprintf"%02x",ord$_}split//,$buf)."\n";
     }
