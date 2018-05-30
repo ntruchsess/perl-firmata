@@ -1,5 +1,11 @@
 package Device::Firmata::IO::NetIO;
 
+=head1 NAME
+
+Device::Firmata::IO::NetIO - implement the low level TCP/IP IO
+
+=cut
+
 use strict;
 use warnings;
 use IO::Socket::INET;
@@ -10,6 +16,11 @@ use Device::Firmata::Base
     ISA => 'Device::Firmata::Base',
     FIRMATA_ATTRIBS => {
     };
+
+
+=head2 listen
+
+=cut
 
 sub listen {
 # --------------------------------------------------

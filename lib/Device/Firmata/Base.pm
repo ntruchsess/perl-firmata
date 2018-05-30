@@ -1,6 +1,7 @@
 package Device::Firmata::Base;
 
 use strict 'vars', 'subs';
+use warnings;
 use vars qw/
     $AUTOLOAD
     $FIRMATA_DEBUG_LEVEL

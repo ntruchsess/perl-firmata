@@ -7,6 +7,7 @@ Device::Firmata::Platform - Platform specifics
 =cut
 
 use strict;
+use warnings;
 use Time::HiRes qw/time/;
 use Device::Firmata::Constants qw/ :all /;
 use Device::Firmata::Protocol;

@@ -12,6 +12,7 @@ Device::Firmata::Platform class
 =cut
 
 use strict;
+use warnings;
 use Device::Firmata::Platform;
 use Device::Firmata::Base
     ISA => 'Device::Firmata::Platform';

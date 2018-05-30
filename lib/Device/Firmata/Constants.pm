@@ -7,6 +7,7 @@ Device::Firmata::Constants - constants used in the Device::Firmata system
 =cut
 
 use strict;
+use warnings;
 use Exporter;
 use vars qw/
   @ISA @EXPORT_OK %EXPORT_TAGS
@@ -14,6 +15,7 @@ use vars qw/
   $COMMANDS $COMMAND_NAMES
   $COMMAND_LOOKUP
   /;
+  
 @ISA = 'Exporter';
 
 # Basic commands and constants

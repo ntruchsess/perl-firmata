@@ -48,9 +48,9 @@ our $DEBUG = 0;
 
 =head1 SUBROUTINES/METHODS
 
-=head2 open
+=head2 open(serialPort)
 
-establish serial connection with an Arduino micro-controller.  Single argument is the name of the device file mapped to the arduino.  Typically '/dev/ttyUSB0' or 'COM9'
+Establish a serial connection with an Arduino micro-controller. The first argument is the name of the serial device mapped to the arduino, e.g. '/dev/ttyUSB0' or 'COM9'.
 
 =cut
 
@@ -74,6 +74,12 @@ sub open {
   return $platform;
 }
 
+=head2 listen(host, port)
+
+Start a TCP server bound to given local address and port for the arduino to connect to.
+
+=cut
+
 sub listen {
 # --------------------------------------------------
 # Listen on socket and wait for Arduino to establish a connection
@@ -85,5 +91,18 @@ sub listen {
 
   return $netio->listen( $ip, $port, $opts ) || die "Could not bind to socket";
 }
+
+=head1 LICENSE
+
+    Copyright (C) 2010 amimato
+    Copyright (C) 2012 ntruchsess
+    Copyright (C) 2016 jnsbyr
+
+    This is free software; you can redistribute it and/or modify it under
+    the same terms as the Perl 5 programming language system itself.
+
+    See http://dev.perl.org/licenses/ for more information.
+
+=cut
 
 1;

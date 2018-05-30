@@ -5,12 +5,14 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
     NAME                => 'Device::Firmata',
-    AUTHOR              => q{amimato <amimoto>, Norbert Truchsess <ntruchses@cpan.org>, Jens Beyer <jnsbyr@cpan.org>},
+    AUTHOR              => [
+        'Aki Mimoto <amimoto@cpan.org>', 
+        'Norbert Truchsess <ntruchses@cpan.org>', 
+        'Jens B. <jnsbyr@cpan.org>', 
+    ],
     VERSION_FROM        => 'lib/Device/Firmata.pm',
     ABSTRACT_FROM       => 'lib/Device/Firmata.pm',
-    ($ExtUtils::MakeMaker::VERSION >= 6.3002
-      ? ('LICENSE'=> 'perl')
-      : ()),
+    ($ExtUtils::MakeMaker::VERSION >= 6.3001? ('LICENSE'=> 'perl_5') : ()),
     PL_FILES            => {},
     MIN_PERL_VERSION    => 5.006,
     CONFIGURE_REQUIRES  => {
@@ -19,10 +21,29 @@ WriteMakefile(
     BUILD_REQUIRES      => {
         'Test::More' => 0,
     },
-    PREREQ_PM => {    
-        'Device::SerialPort' => 0,
-        'Test::More' => 0,
+    PREREQ_PM => {
+        ($^O eq 'MSWin32'? ('Win32::SerialPort' => 0) : ('Device::SerialPort' => 0)),
+        'IO::Select' => 0,
+        'IO::Socket::INET' => 0,
+        'Time::HiRes' => 0,
+        'strict' => 0,
+        'warnings' => 0
     },
-    dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-    clean               => { FILES => 'Device-Firmata-*' },
+    dist                => {
+        COMPRESS => 'gzip -9f',
+        SUFFIX => 'gz',
+    },
+    clean               => {
+        FILES => 'Device-Firmata-*'
+    },
+    META_MERGE => {
+        'meta-spec' => { version => 2 },
+         resources => {
+             repository => {
+                 type => 'git',
+                 url  => 'https://github.com/ntruchsess/perl-firmata.git',
+                 web  => 'https://github.com/ntruchsess/perl-firmata',
+             },
+         },
+    },
 );

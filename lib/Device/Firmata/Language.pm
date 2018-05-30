@@ -8,6 +8,7 @@ Device::Firmata::Language - Localization
 =cut
 
 use strict;
+use warnings;
 use vars qw/
         $FIRMATA_LOCALE
         $FIRMATA_LOCALE_PATH
