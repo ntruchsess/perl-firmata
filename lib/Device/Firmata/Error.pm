@@ -8,6 +8,7 @@ Device::Firmata::Error - Error handlers
 =cut
 
 use strict;
+use warnings;        
 use Exporter;
 use vars qw/
             @ISA

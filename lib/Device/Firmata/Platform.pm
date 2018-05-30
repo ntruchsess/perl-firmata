@@ -7,6 +7,7 @@ Device::Firmata::Platform - Platform specifics
 =cut
 
 use strict;
+use warnings;
 use Time::HiRes qw/time/;
 use Device::Firmata::Constants qw/ :all /;
 use Device::Firmata::Protocol;
@@ -257,7 +258,7 @@ sub sysex_handle {
       my @encoderpins;
       my @serialpins;
       my @pulluppins;
-      
+
       foreach my $pin (keys %$capabilities) {
         if (defined $capabilities->{$pin}) {
           if ($capabilities->{$pin}->{PIN_INPUT+0}) {
@@ -388,7 +389,7 @@ sub sysex_handle {
       };
       last;
     };
-    
+
     $sysex_message->{command_str} eq 'SERIAL_DATA' and do {
       my $serialPort = $data->{port};
       my $observer = $self->{serial_observer}[$serialPort];
@@ -485,7 +486,7 @@ Analogous to the digitalWrite function on the
 arduino
 
 Deprecation Warning:
-Writing to pin with mode "INPUT" is only supported for backward compatibility 
+Writing to pin with mode "INPUT" is only supported for backward compatibility
 to switch pullup on and off. Use sub pin_mode with $mode=PIN_PULLUP instead.
 
 =cut
@@ -1015,7 +1016,7 @@ sub is_supported_mode {
   return undef if (defined $self->{metadata}->{capabilities} and (!(defined $self->{metadata}->{capabilities}->{$pin}) or !(defined $self->{metadata}->{capabilities}->{$pin}->{$mode})));
   return 1;
 }
- 
+
 sub is_configured_mode {
   my ($self,$pin,$mode) = @_;
   return undef if (!defined $self->{pin_modes}->{$pin} or $self->{pin_modes}->{$pin} != $mode);

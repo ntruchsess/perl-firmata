@@ -7,6 +7,7 @@ Device::Firmata::Constants - constants used in the Device::Firmata system
 =cut
 
 use strict;
+use warnings;
 use Exporter;
 use vars qw/
   @ISA @EXPORT_OK %EXPORT_TAGS
@@ -14,6 +15,7 @@ use vars qw/
   $COMMANDS $COMMAND_NAMES
   $COMMAND_LOOKUP
   /;
+  
 @ISA = 'Exporter';
 
 # Basic commands and constants
@@ -139,7 +141,7 @@ use constant (
 
     },    # /Constants for Version 2.2
 
-    V_2_03 => { 
+    V_2_03 => {
 
       MAX_DATA_BYTES           =>  32, # max number of data bytes in non-Sysex messages
 
@@ -356,7 +358,7 @@ use constant (
       ONEWIRE                  => 0x07, # pin configured for 1-Wire commuication
       STEPPER                  => 0x08, # pin configured for stepper motor
       ENCODER                  => 0x09, # pin configured for rotary-encoders
-      SERIAL                   => 0x0A, # pin configured for serial port      
+      SERIAL                   => 0x0A, # pin configured for serial port
       PULLUP                   => 0x0B, # digital pin in digitalInput mode with pullup
 
       # Deprecated entries
@@ -364,7 +366,7 @@ use constant (
         qw( FIRMATA_STRING SYSEX_I2C_REQUEST SYSEX_I2C_REPLY SYSEX_SAMPLING_INTERVAL )
       ],
 
-    },    # /Constants for Version 2.6    
+    },    # /Constants for Version 2.6
   }
 );
 
@@ -393,4 +395,4 @@ use constant { COMMAND_NAMES => [ $COMMAND_NAMES = [ keys %$COMMAND_NAMES ] ] };
 
 %EXPORT_TAGS = ( all => \@EXPORT_OK );
 
-1;     
+1;
