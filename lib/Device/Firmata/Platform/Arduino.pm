@@ -2,12 +2,12 @@ package Device::Firmata::Platform::Arduino;
 
 =head1 NAME
 
-Device::Firmata::Platform::Arduino - subclass for the arduino itself
+Device::Firmata::Platform::Arduino - subclass for the Arduino itself
 
 =head1 DESCRIPTION
 
-No customization requried at this time so this is just a specification of the
-Device::Firmata::Platform class
+No customization required at this time so this is just a specification of the
+Device::Firmata::Platform class.
 
 =cut
 

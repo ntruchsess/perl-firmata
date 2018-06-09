@@ -2,7 +2,7 @@ package Device::Firmata::IO::SerialIO;
 
 =head1 NAME
 
-Device::Firmata::IO::SerialIO - implement the low level serial IO
+Device::Firmata::IO::SerialIO - implement the low level serial IO.
 
 =cut
 
@@ -22,7 +22,9 @@ $SERIAL_CLASS = $^O eq 'MSWin32' ? 'Win32::SerialPort'
 eval "require $SERIAL_CLASS";
 
 
-=head2 open
+=head2 open ( serialPort , [opts] )
+
+Establish a serial connection with a Firmata device. The first parameter is the name of the serial device connected with the Firmata device, e.g. '/dev/ttyUSB0' or 'COM9'. The second parameter is  an optional hash of parameters for the serial port. The parameter C<baudrate> is supported and defaults to C<57600>. Returns a C<Device::Firmata::IO::SerialIO> object. Typically called internally by the C<open> method of L<Device::Firmata>.
 
 =cut
 
@@ -38,6 +40,12 @@ sub open {
   return $self;
 }
 
+=head2 attach ( serialPort )
+
+Assign a L<Device::SerialPort> (or L<Win32::SerialPort>) as IO port and return a L<Device::Firmata::IO::SerialIO> object. Typically used internally by the C<open()> method.
+
+=cut
+
 sub attach {
   my ( $pkg, $serial_obj, $opts ) = @_;
   my $self = ref $pkg ? $pkg : $pkg->new($opts);
@@ -47,7 +55,7 @@ sub attach {
 
 =head2 data_write
 
-Dump a bunch of data into the comm port
+Send a bunch of data to the Firmata device. Typically used internally by L<Device::Firmata::Platform>.
 
 =cut
 
@@ -61,8 +69,7 @@ sub data_write {
 
 =head2 data_read
 
-We fetch up to $bytes from the comm port
-This function is non-blocking
+Fetch up to given number of bytes from the serial port. This function is non-blocking. Returns the received data. Typically used internally by L<Device::Firmata::Platform>.
 
 =cut
 
@@ -73,5 +80,11 @@ sub data_read {
   print "<".join(",",map{sprintf"%02x",ord$_}split//,$string)."\n" if ( $Device::Firmata::DEBUG and $string );
   return $string;
 }
+
+=head1 SEE ALSO
+
+L<Device::Firmata::Base>
+
+=cut
 
 1;
