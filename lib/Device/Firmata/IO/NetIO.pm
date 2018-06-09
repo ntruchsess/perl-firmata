@@ -1,8 +1,8 @@
 package Device::Firmata::IO::NetIO;
 
-=head1 NAME
+=head1 Device::Firmata::IO::NetIO
 
-Device::Firmata::IO::NetIO - implement the low level TCP/IP IO
+Implements the low level TCP/IP server socket IO.
 
 =cut
 
@@ -17,8 +17,11 @@ use Device::Firmata::Base
     FIRMATA_ATTRIBS => {
     };
 
+=head2 METHODS
 
-=head2 listen
+=head3 listen ( host, port )
+
+Start a TCP server bound to given local address and port for the Firmata device to connect to. Returns a C<Device::Firmata::IO::NetIO> object. Typically called by method C<listen> of L<Device::Firmata>. An implementation example can be found in file F<examples/example-tcpserver.pl>.
 
 =cut
 
@@ -47,6 +50,12 @@ sub listen {
 	return $self;
 }
 
+=head3 accept ( timeout )
+
+Wait until timeout seconds for an Firmata device to connect. Returns a L<Device::Firmata::Platform> object on success or C<undef>. An implementation example can be found in file F<examples/example-tcpserver.pl>.
+
+=cut
+
 sub accept {
 
 	my ($self,$timeout) = @_;
@@ -70,6 +79,12 @@ sub accept {
 	return undef;
 }
 
+=head3 close ( )
+
+Closes the TCP server socket and disconnects all Firmata devices. An implementation example can be found in file F<examples/example-tcpserver.pl>.
+
+=cut
+
 sub close {
 	my $self = shift;
 	if ($self->{'select'} && $self->{'socket'}) {
@@ -88,19 +103,25 @@ sub close {
 	}
 }
 
-sub attach {
-    my ( $pkg, $client_socket, $opts ) = @_;
+=head3 attach ( connectedSocket )
 
-    my $self = ref $pkg ? $pkg : $pkg->new($opts);
+Assign a connected L<IO::Socket::INET> as IO port and return a L<Device::Firmata::Platform> object. Typically used internally by the C<accept()> method.
+
+=cut
+
+sub attach {
+  my ( $pkg, $client_socket, $opts ) = @_;
+
+  my $self = ref $pkg ? $pkg : $pkg->new($opts);
 
 	my $clientpackage = "Device::Firmata::IO::NetIO::Client";
 	eval "require $clientpackage";
 
 	my $clientio = $clientpackage->attach($client_socket);
 
-    my $package = "Device::Firmata::Platform";
-    eval "require $package";
-  	my $platform = $package->attach( $clientio, $opts ) or die "Could not connect to Firmata Server";
+  my $package = "Device::Firmata::Platform";
+  eval "require $package";
+  my $platform = $package->attach( $clientio, $opts ) or die "Could not connect to Firmata Server";
 
 	my $s = $self->{'select'};
 	if (!($s)) {
@@ -113,13 +134,19 @@ sub attach {
 		$clients = [];
 		$self->{clients} = $clients;
 	}
-	push $clients, $platform;
+	push @$clients, $platform;
 
 	# Figure out what platform we're running on
-    $platform->probe();
+  $platform->probe();
 
-    return $platform;
+  return $platform;
 }
+
+=head3 poll ( timeout )
+
+Wait for timeout seconds for data from Firmata devices. If data is received the method C<poll> of L<Device::Firmata::Platform> will be called for processing. An implementation example can be found in file F<examples/example-tcpserver.pl>.
+
+=cut
 
 sub poll {
 	my ($self,$timeout) = @_;
@@ -146,6 +173,12 @@ sub poll {
 
 package Device::Firmata::IO::NetIO::Client;
 
+=head1 Device::Firmata::IO::NetIO::Client
+
+Implements the low level TCP/IP client socket IO.
+
+=cut
+
 use strict;
 use warnings;
 use IO::Socket::INET;
@@ -156,53 +189,60 @@ use Device::Firmata::Base
     FIRMATA_ATTRIBS => {
     };
 
+=head2 METHODS
+
+=head3 attach ( connectedSocket )
+
+Assign a connected L<IO::Socket::INET> as IO port and return a C<Device::Firmata::IO::NetIO::Client> object. Typically used internally by the C<attach()> method of L<Device::Firmata::IO::NetIO>.
+
+=cut
+
 sub attach {
-    my ( $pkg, $client_socket, $opts ) = @_;
+  my ( $pkg, $client_socket, $opts ) = @_;
 
-    my $self = ref $pkg ? $pkg : $pkg->new($opts);
+  my $self = ref $pkg ? $pkg : $pkg->new($opts);
 
-    $self->{client} = $client_socket;
+  $self->{client} = $client_socket;
 
-    return $self;
+  return $self;
 }
 
-=head2 data_write
+=head3 data_write ( buffer )
 
-Dump a bunch of data into the comm port
+Send a bunch of data to the Firmata device. Typically used internally by L<Device::Firmata::Platform>.
 
 =cut
 
 sub data_write {
 # --------------------------------------------------
-    my ( $self, $buf ) = @_;
-    $Device::Firmata::DEBUG and print ">".join(",",map{sprintf"%02x",ord$_}split//,$buf)."\n";
-    return $self->{client}->write( $buf );
+  my ( $self, $buf ) = @_;
+  $Device::Firmata::DEBUG and print ">".join(",",map{sprintf"%02x",ord$_}split//,$buf)."\n";
+  return $self->{client}->write( $buf );
 }
 
 
-=head2 data_read
+=head3 data_read ( bytes )
 
-We fetch up to $bytes from the comm port
-This function is non-blocking
+Fetch up to given number of bytes from the client socket. This function is non-blocking. Returns the received data. Typically used internally by L<Device::Firmata::Platform>.
 
 =cut
 
 sub data_read {
 # --------------------------------------------------
-    my ( $self, $bytes ) = @_;
+  my ( $self, $bytes ) = @_;
 	my ($buf, $res);
 	$res = $self->{client}->sysread($buf, 512);
-    $buf = "" if(!defined($res));
+  $buf = "" if(!defined($res));
 
-    if ( $Device::Firmata::DEBUG and $buf ) {
-        print "<".join(",",map{sprintf"%02x",ord$_}split//,$buf)."\n";
-    }
-    return $buf;
+  if ( $Device::Firmata::DEBUG and $buf ) {
+    print "<".join(",",map{sprintf"%02x",ord$_}split//,$buf)."\n";
+  }
+  return $buf;
 }
 
-=head2 close
+=head3 close
 
-close the underlying connection
+Close the TCP client socket to the Firmata device. The listening socket will not be affected. Typically used internally by L<Device::Firmata::Platform> and C<Device::Firmata::IO::NetIO>.
 
 =cut
 
@@ -210,5 +250,11 @@ sub close {
 	my $self = shift;
 	$self->{client}->close() if (($self->{client}) and $self->{client}->connected());
 }
+
+=head1 SEE ALSO
+
+L<Device::Firmata::Base>
+
+=cut
 
 1;

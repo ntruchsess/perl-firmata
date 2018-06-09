@@ -11,36 +11,43 @@ To install this module, run the following commands:
 	make test
 	make install
 
+  
 SUPPORT AND DOCUMENTATION
 
 After installing, you can find documentation for this module with the
 perldoc command.
 
     perldoc Device::Firmata
+    
+You will find a web presentation on "Controlling an Arduino with Perl" 
+at file://presentation/index.html.
+
+The folder "example" holds more than 15 Perl example applications for 
+various Firmata IO implementations incl. I2C and 1-Wire.
 
 You can also look for information at:
-
-    RT, CPAN's request tracker
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Device-Firmata
 
     AnnoCPAN, Annotated CPAN documentation
         http://annocpan.org/dist/Device-Firmata
 
+    Search meta::cpan
+        https://metacpan.org/release/Device-Firmata
+
+    RT, CPAN's request tracker
+        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Device-Firmata
+
     CPAN Ratings
         http://cpanratings.perl.org/d/Device-Firmata
-
-    Search CPAN
-        http://search.cpan.org/dist/Device-Firmata/
 
 
 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010 amimato
-Copyright (C) 2012 ntruchsess
-Copyright (C) 2016 jnsbyr
+Copyright (C) 2010 Aki Mimoto
+Copyright (C) 2012 Norbert Truchsess
+Copyright (C) 2016 Jens B.
 
-This is free software; you can redistribute it and/or modify it under
-the same terms as the Perl 5 programming language system itself.
+This is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
 
 See http://dev.perl.org/licenses/ for more information.
 

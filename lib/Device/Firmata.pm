@@ -11,15 +11,17 @@ use Device::Firmata::Base
 
 =head1 NAME
 
-Device::Firmata - Perl interface to Firmata for the arduino platform.
+Device::Firmata - A Perl implementation of the Firmata protocol.
+
+This module allows a computer running Perl to connect to Firmata devices (Arduinos and compatible, including ESP8266), either via serial IO (RS-232, USB, etc.) or TCP/IP (LAN, WiFi). Protocol details can be found at L<https://github.com/firmata/protocol>.
 
 =head1 VERSION
 
-Version 0.64
+Version 0.65
 
 =cut
 
-our $VERSION = '0.64';
+our $VERSION = '0.65';
 our $DEBUG = 0;
 
 
@@ -46,11 +48,11 @@ our $DEBUG = 0;
         sleep 0.5;
     }
 
-=head1 SUBROUTINES/METHODS
+=head1 METHODS
 
-=head2 open(serialPort)
+=head2 open ( serialPort , [opts] )
 
-Establish a serial connection with an Arduino micro-controller. The first argument is the name of the serial device mapped to the arduino, e.g. '/dev/ttyUSB0' or 'COM9'.
+Establish a serial connection with a Firmata device. The first parameter is the name of the serial device connected with the Firmata device, e.g. '/dev/ttyUSB0' or 'COM9'. The second parameter is  an optional hash of parameters for the serial port. The parameter C<baudrate> is supported and defaults to C<57600>. Returns a L<Device::Firmata::Platform> object.
 
 =cut
 
@@ -74,9 +76,9 @@ sub open {
   return $platform;
 }
 
-=head2 listen(host, port)
+=head2 listen ( host, port )
 
-Start a TCP server bound to given local address and port for the arduino to connect to.
+Start a TCP server bound to given local address and port for the Arduino to connect to. Returns a L<Device::Firmata::IO::NetIO> object. An implementation example can be found in file F<examples/example-tcpserver.pl>.
 
 =cut
 
@@ -92,16 +94,26 @@ sub listen {
   return $netio->listen( $ip, $port, $opts ) || die "Could not bind to socket";
 }
 
+=head1 EXAMPLES
+
+In the folder F<examples> you will find more than 15 implementation examples for various Firmata IO operations including digital I/O, PWM, stepper and encoder as well as bus I/O for I2C and 1-Wire.
+
+=head1 SEE ALSO
+
+L<Device::Firmata::Base>
+
 =head1 LICENSE
 
-    Copyright (C) 2010 amimato
-    Copyright (C) 2012 ntruchsess
-    Copyright (C) 2016 jnsbyr
+Copyright (C) 2010 Aki Mimoto
 
-    This is free software; you can redistribute it and/or modify it under
-    the same terms as the Perl 5 programming language system itself.
+Copyright (C) 2012 Norbert Truchsess
 
-    See http://dev.perl.org/licenses/ for more information.
+Copyright (C) 2016 Jens B.
+
+This is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+See http://dev.perl.org/licenses/ for more information.
 
 =cut
 

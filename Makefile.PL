@@ -38,6 +38,7 @@ WriteMakefile(
     },
     META_MERGE => {
         'meta-spec' => { version => 2 },
+         homepage => 'https://github.com/ntruchsess/perl-firmata/',
          resources => {
              repository => {
                  type => 'git',

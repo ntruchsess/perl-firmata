@@ -1,15 +1,19 @@
 Revision history for Device-Firmata
 
-0.64    2018.01.03 - Jens Beyer
+0.65    2018.06.09 - Jens B.
+        fix push on reference in method attach of Device::Firmata::IO::NetIO
+        added and updated POD
+
+0.64    2018.01.03 - Jens B.
         support Firmata protocol version 2.5 feature PIN_PULLUP (Constants, Platform, Protocol)
         
-0.63    2016.03.19 - Jens Beyer
+0.63    2016.03.19 - Jens B.
         supported protocol version detection modified (Protocol)
         
-0.62    2016.02.22 - Jens Beyer
+0.62    2016.02.22 - Jens B.
         added software serial support (Platform, Protocol)
         
-0.61    2016.01.09 - Jens Beyer
+0.61    2016.01.09 - Jens B.
         added serial pin support (Platform, Protocol, Constants)
         added protocol version query (Platform)
         fixed messages_handle: REPORT_VERSION returns protocol version (Platform)
