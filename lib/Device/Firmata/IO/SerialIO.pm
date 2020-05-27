@@ -40,6 +40,11 @@ sub open {
   return $self;
 }
 
+sub close {
+  my ( $self ) = @_;
+  $self->{handle}->close();
+}
+
 =head2 attach ( serialPort )
 
 Assign a L<Device::SerialPort> (or L<Win32::SerialPort>) as IO port and return a L<Device::Firmata::IO::SerialIO> object. Typically used internally by the C<open()> method.
