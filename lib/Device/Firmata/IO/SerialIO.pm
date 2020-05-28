@@ -40,6 +40,7 @@ sub open {
   return $self;
 }
 
+
 =head2 attach ( serialPort )
 
 Assign a L<Device::SerialPort> (or L<Win32::SerialPort>) as IO port and return a L<Device::Firmata::IO::SerialIO> object. Typically used internally by the C<open()> method.
@@ -52,6 +53,7 @@ sub attach {
   $self->{handle} = $serial_obj;
   return $self;
 }
+
 
 =head2 data_write
 
@@ -80,6 +82,23 @@ sub data_read {
   print "<".join(",",map{sprintf"%02x",ord$_}split//,$string)."\n" if ( $Device::Firmata::DEBUG and $string );
   return $string;
 }
+
+
+=head2 close
+
+Close serial connection to Firmata device.
+
+=cut
+
+sub close($) {
+# --------------------------------------------------
+  my ( $self ) = @_;
+  if ($self->{handle}) {
+    $self->{handle}->close();
+    delete $self->{handle};
+  }
+}
+
 
 =head1 SEE ALSO
 
