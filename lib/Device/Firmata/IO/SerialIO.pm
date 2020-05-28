@@ -40,10 +40,6 @@ sub open {
   return $self;
 }
 
-sub close {
-  my ( $self ) = @_;
-  $self->{handle}->close();
-}
 
 =head2 attach ( serialPort )
 
@@ -57,6 +53,7 @@ sub attach {
   $self->{handle} = $serial_obj;
   return $self;
 }
+
 
 =head2 data_write
 
@@ -85,6 +82,23 @@ sub data_read {
   print "<".join(",",map{sprintf"%02x",ord$_}split//,$string)."\n" if ( $Device::Firmata::DEBUG and $string );
   return $string;
 }
+
+
+=head2 close
+
+Close serial connection to Firmata device.
+
+=cut
+
+sub close($) {
+# --------------------------------------------------
+  my ( $self ) = @_;
+  if ($self->{handle}) {
+    $self->{handle}->close();
+    delete $self->{handle};
+  }
+}
+
 
 =head1 SEE ALSO
 
