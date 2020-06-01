@@ -2,12 +2,15 @@ package Device::Firmata::Platform::Arduino;
 
 =head1 NAME
 
-Device::Firmata::Platform::Arduino - subclass for the Arduino itself
+Device::Firmata::Platform::Arduino - subclass for Arduino Firmata devices
 
 =head1 DESCRIPTION
 
-No customization required at this time so this is just a specification of the
-Device::Firmata::Platform class.
+Subclass of L<Device::Firmata::Platform> to provide a specific
+implementation for Arduino Firmata devices.
+
+Note: Currently there is no specific implemention, consider using the
+base class directly.
 
 =cut
 

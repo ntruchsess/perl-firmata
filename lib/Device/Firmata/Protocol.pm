@@ -2,7 +2,7 @@ package Device::Firmata::Protocol;
 
 =head1 NAME
 
-Device::Firmata::Protocol - details of the actual firmata protocol
+Device::Firmata::Protocol - Firmata protocol implementation
 
 =cut
 
@@ -119,6 +119,8 @@ our $MODENAMES = {
 
 =head1 DESCRIPTION
 
+Implementation of the Firmata 2.5 protocol specification.
+
 Because we're dealing with a permutation of the
 MIDI protocol, certain commands are one byte,
 others 2 or even 3. We do this part to figure out
@@ -162,7 +164,7 @@ D       1
 E       2
 F       0 or variable
 
-=cut
+=head1 METHODS
 
 =head2 message_data_receive
 

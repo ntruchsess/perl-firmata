@@ -13,11 +13,9 @@ WriteMakefile(
     VERSION_FROM        => 'lib/Device/Firmata.pm',
     ABSTRACT_FROM       => 'lib/Device/Firmata.pm',
     ($ExtUtils::MakeMaker::VERSION >= 6.3001? ('LICENSE'=> 'perl_5') : ()),
+    ($ExtUtils::MakeMaker::VERSION >= 6.18? ('SIGN'=> '0') : ()),
     PL_FILES            => {},
     MIN_PERL_VERSION    => 5.006,
-    CONFIGURE_REQUIRES  => {
-        'ExtUtils::MakeMaker' => 0,
-    },
     BUILD_REQUIRES      => {
         'Test::More' => 0,
     },

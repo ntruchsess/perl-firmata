@@ -1,6 +1,11 @@
 Device-Firmata
 
-Device::Firmata - Perl interface to the Firmata protocol for talking to the arduino microcontroler platform. See http://firmata.org/wiki/Main_Page for more details.
+Device::Firmata - A Perl implementation of the Firmata protocol.
+
+This module allows a computer running Perl to connect to Firmata devices (Arduinos and compatible, including ESP8266), either via serial I/O (RS-232, USB, etc.) or TCP/IP (LAN, WiFi). 
+
+Protocol details can be found at https://github.com/firmata/protocol.
+
 
 INSTALLATION
 

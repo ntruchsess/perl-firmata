@@ -1,8 +1,8 @@
 package Device::Firmata::IO::NetIO;
 
-=head1 Device::Firmata::IO::NetIO
+=head1 NAME
 
-Implements the low level TCP/IP server socket IO.
+Device::Firmata::IO::NetIO - TCP/IP server interface to Firmata device
 
 =cut
 
@@ -17,11 +17,11 @@ use Device::Firmata::Base
     FIRMATA_ATTRIBS => {
     };
 
-=head2 METHODS
+=head1 METHODS
 
-=head3 listen ( host, port )
+=head2 listen ( host, port, [opts] )
 
-Start a TCP server bound to given local address and port for the Firmata device to connect to. Returns a C<Device::Firmata::IO::NetIO> object. Typically called by method C<listen> of L<Device::Firmata>. An implementation example can be found in file F<examples/example-tcpserver.pl>.
+Start a TCP server bound to given local address and port for the Firmata device to connect to. Returns a L<Device::Firmata::IO::NetIO> object. Typically called internally by L<Device::Firmata/listen ( host, port, [opts] )>. An implementation example can be found in file F<examples/example-tcpserver.pl>.
 
 =cut
 
@@ -50,9 +50,9 @@ sub listen {
 	return $self;
 }
 
-=head3 accept ( timeout )
+=head2 accept ( timeout )
 
-Wait until timeout seconds for an Firmata device to connect. Returns a L<Device::Firmata::Platform> object on success or C<undef>. An implementation example can be found in file F<examples/example-tcpserver.pl>.
+Wait until timeout seconds for an Firmata device to connect. Will call L<Device::Firmata::IO::NetIO/attach ( connectedSocket, [opts] )> on connect. Returns a L<Device::Firmata::Platform> object on success or C<undef> on error. An implementation example can be found in file F<examples/example-tcpserver.pl>.
 
 =cut
 
@@ -79,7 +79,7 @@ sub accept {
 	return undef;
 }
 
-=head3 close ( )
+=head2 close ( )
 
 Closes the TCP server socket and disconnects all Firmata devices. An implementation example can be found in file F<examples/example-tcpserver.pl>.
 
@@ -103,9 +103,9 @@ sub close {
 	}
 }
 
-=head3 attach ( connectedSocket )
+=head2 attach ( connectedSocket, [opts] )
 
-Assign a connected L<IO::Socket::INET> as IO port and return a L<Device::Firmata::Platform> object. Typically used internally by the C<accept()> method.
+Assign a connected L<IO::Socket::INET> socket as I/O port, call L<Device::Firmata::Platform/probe ( )> and return a L<Device::Firmata::Platform> object. Typically used internally by the L<Device::Firmata::IO::NetIO/accept ( timeout )> method.
 
 =cut
 
@@ -142,9 +142,9 @@ sub attach {
   return $platform;
 }
 
-=head3 poll ( timeout )
+=head2 poll ( timeout )
 
-Wait for timeout seconds for data from Firmata devices. If data is received the method C<poll> of L<Device::Firmata::Platform> will be called for processing. An implementation example can be found in file F<examples/example-tcpserver.pl>.
+Wait for timeout seconds for data from Firmata devices. If data is received L<Device::Firmata::Platform/poll ( )> will be called for processing. An implementation example can be found in file F<examples/example-tcpserver.pl>.
 
 =cut
 
@@ -173,9 +173,9 @@ sub poll {
 
 package Device::Firmata::IO::NetIO::Client;
 
-=head1 Device::Firmata::IO::NetIO::Client
+=head1 NAME
 
-Implements the low level TCP/IP client socket IO.
+Device::Firmata::IO::NetIO::Client - I/O operations on TCP/IP client session
 
 =cut
 
@@ -189,11 +189,11 @@ use Device::Firmata::Base
     FIRMATA_ATTRIBS => {
     };
 
-=head2 METHODS
+=head1 METHODS
 
-=head3 attach ( connectedSocket )
+=head2 attach ( connectedSocket, [opts] )
 
-Assign a connected L<IO::Socket::INET> as IO port and return a C<Device::Firmata::IO::NetIO::Client> object. Typically used internally by the C<attach()> method of L<Device::Firmata::IO::NetIO>.
+Assign a connected L<IO::Socket::INET> as I/O port and return a L<Device::Firmata::IO::NetIO::Client> object. Typically used internally by L<Device::Firmata::IO::NetIO/attach ( connectedSocket, [opts] )>.
 
 =cut
 
@@ -207,9 +207,9 @@ sub attach {
   return $self;
 }
 
-=head3 data_write ( buffer )
+=head2 data_write ( buffer )
 
-Send a bunch of data to the Firmata device. Typically used internally by L<Device::Firmata::Platform>.
+Send a bunch of data to the Firmata device. Returns number of transmitted bytes. Typically used internally by L<Device::Firmata::Platform>.
 
 =cut
 
@@ -221,7 +221,7 @@ sub data_write {
 }
 
 
-=head3 data_read ( bytes )
+=head2 data_read ( numBytes )
 
 Fetch up to given number of bytes from the client socket. This function is non-blocking. Returns the received data. Typically used internally by L<Device::Firmata::Platform>.
 
@@ -240,9 +240,9 @@ sub data_read {
   return $buf;
 }
 
-=head3 close
+=head2 close ( )
 
-Close the TCP client socket to the Firmata device. The listening socket will not be affected. Typically used internally by L<Device::Firmata::Platform> and C<Device::Firmata::IO::NetIO>.
+Close the TCP client socket to the Firmata device. The listening socket will not be affected. Typically used internally by L<Device::Firmata::Platform> and L<Device::Firmata::IO::NetIO>.
 
 =cut
 
@@ -253,7 +253,7 @@ sub close {
 
 =head1 SEE ALSO
 
-L<Device::Firmata::Base>
+L<Device::Firmata::Platform/attach ( ioPort )>
 
 =cut
 
