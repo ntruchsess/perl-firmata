@@ -1,9 +1,15 @@
 package Device::Firmata::Language;
-# ==================================================================
 
 =head1 NAME
 
-Device::Firmata::Language - Localization
+Device::Firmata::Language - localization
+
+=head1 DESCRIPTION
+
+Intendend for I8N of L<Device::Firmata::Error>.
+Requires a file named <locale>.txt containing translations at runtime.
+
+Implementation Status: experimental, unused
 
 =cut
 
@@ -25,6 +31,7 @@ $FIRMATA_LOCALE_MESSAGES = {
 $FIRMATA_LOCALE = 'en';
 $FIRMATA_LOCALE_PATH = '.';
 
+=head1 METHODS
 
 =head2 numbers
 

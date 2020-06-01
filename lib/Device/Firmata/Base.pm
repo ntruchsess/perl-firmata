@@ -1,5 +1,15 @@
 package Device::Firmata::Base;
 
+=head1 NAME
+
+Device::Firmata::Base - abstract baseclass for Device::Firmata modules
+
+=head1 DESCRIPTION
+
+Provides various convenience methods for module internal use.
+
+=cut
+
 use strict 'vars', 'subs';
 use warnings;
 use vars qw/
@@ -13,12 +23,6 @@ use vars qw/
     $FIRMATA_LOCALE_PATH
     $FIRMATA_LOCALE_MESSAGES
 /;
-
-=head1 NAME
-
-Device::Firmata::Base -- Abstract baseclass for Device::Firmata modules
-
-=cut
 
 $FIRMATA_DEBUGGING = 1;
 $FIRMATA_ATTRIBS = {};

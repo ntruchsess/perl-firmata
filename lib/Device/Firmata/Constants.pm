@@ -2,7 +2,51 @@ package Device::Firmata::Constants;
 
 =head1 NAME
 
-Device::Firmata::Constants - constants used in the Device::Firmata system
+Device::Firmata::Constants - constants used in the Device::Firmata modules
+
+=head1 DESCRIPTION
+
+Provides several constants to be used with L<Device::Firmata::Platform>.
+
+Pin modes:
+
+=over
+
+=item * PIN_INPUT
+
+=item * PIN_OUTPUT
+
+=item * PIN_ANALOG
+
+=item * PIN_PWM
+
+=item * PIN_SERVO
+
+=item * PIN_SHIFT
+
+=item * PIN_I2C
+
+=item * PIN_ONEWIRE
+
+=item * PIN_STEPPER
+
+=item * PIN_ENCODER
+
+=item * PIN_SERIAL
+
+=item * PIN_PULLUP
+
+=back
+
+Digital pin states:
+
+=over
+
+=item * PIN_LOW
+
+=item * PIN_HIGH
+
+=back
 
 =cut
 

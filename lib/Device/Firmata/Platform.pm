@@ -2,7 +2,36 @@ package Device::Firmata::Platform;
 
 =head1 NAME
 
-Device::Firmata::Platform - Platform specifics
+Device::Firmata::Platform - Firmata API
+
+=head1 DESCRIPTION
+
+Provides the application programming interface for Device::Firmata
+implementing all major features of the Firmata 2.5 specification:
+
+=over
+
+=item * Analog Firmata
+
+=item * Digital Firmata
+
+=item * I2C Firmata
+
+=item * 1-Wire Firmata
+
+=item * Serial Firmata
+
+=item * Servo Firmata
+
+=item * Stepper Firmata
+
+=item * Firmata Scheduler
+
+=back
+
+This API documentation is currently incomplete and only covers a small
+subset of the implementation. Anyone willing to help improve the
+documentation is welcome.
 
 =cut
 
@@ -60,24 +89,51 @@ use Device::Firmata::Base
   stringresponse              => {},
   };
 
-=head2 open
+=head1 METHODS
 
-Connect to the IO port and do some basic operations
-to find out how to connect to the device
+=head2 attach ( ioPort )
+
+Creates new Firmata Platform instance and attaches the provided I/O port.
+
+=over
+
+=item * param pkg: Perl package name or an instance of Device::Firmata::Platform
+
+=item * param ioPort: either an instance of L<Device::Firmata::IO::SerialIO> or L<DDevice::Firmata::IO::NetIO> or
+                      of any other class that provides compatible implementations for the methods data_read and data_write
+
+=item * return new Device::Firmata::Platform instance
+
+=back
+
+After attaching the I/O port to the Firmata Platform the following sequence of operations is recommended:
+
+=over
+
+=item * 1. Call L</probe ( )> to request the capabilities of the Firmata device.
+
+=item * 2. Call L</pin_mode ( pin, mode )> to configure the pins of the Firmata device.
+
+=item * Periodically call L</poll ( )> to processess messages from the Firmata device.
+
+=back
 
 =cut
 
 sub attach {
-  # --------------------------------------------------
-  # Attach to an open IO port and do some basic operations
-  # to find out how to connect to the device
-  #
   my ( $pkg, $port, $opts ) = @_;
   my $self = ref $pkg ? $pkg : $pkg->new($opts);
   $self->{io} = $port or return;
   $self->{protocol} = Device::Firmata::Protocol->new($opts) or return;
   return $self;
 }
+
+=head2 detach ( )
+
+Detach IO port from Firmata Platform.
+Typically used only internally by L</close ( )>.
+
+=cut
 
 sub detach {
   my $self = shift;
@@ -102,11 +158,23 @@ sub detach {
   $self->{metadata}           = {};
 }
 
+=head2 close ( )
+
+Close IO port and detach from Firmata Platform.
+
+=cut
+
 sub close {
   my $self = shift;
   $self->{io}->close();
   $self->detach();
 }
+
+=head2 system_reset ( )
+
+Try to reset Firmata device. Will only work if Firmata device is connected.
+
+=cut
 
 sub system_reset {
   my $self = shift;
@@ -129,11 +197,11 @@ sub system_reset {
   $self->{metadata}           = {};
 }
 
-=head2 messages_handle
+=head2 messages_handle ( messages )
 
-Receive identified message packets and convert them
-into their appropriate structures and parse
-them as required
+Receive identified message packets and convert them into their appropriate
+structures and parse them as required.
+Typically used only internally by L</poll ( )>.
 
 =cut
 
@@ -223,11 +291,11 @@ sub messages_handle {
   }
 }
 
-=head2 sysex_handle
+=head2 sysex_handle ( sysexMessage)
 
-Receive identified sysex packets and convert them
-into their appropriate structures and parse
-them as required
+Receive identified sysex packets and convert them into their appropriate
+structures and parse them as required.
+Typically used only internally by L</messages_handle ( messages )>.
 
 =cut
 
@@ -289,11 +357,11 @@ sub sysex_handle {
             push @onewirepins, $pin;
           }
           if ($capabilities->{$pin}->{PIN_STEPPER+0}) {
-          	push @stepperpins, $pin;
+            push @stepperpins, $pin;
             $self->{metadata}{stepper_resolutions}{$pin} = $capabilities->{$pin}->{PIN_STEPPER+0}->{resolution};
           }
           if ($capabilities->{$pin}->{PIN_ENCODER+0}) {
-          	push @encoderpins, $pin;
+            push @encoderpins, $pin;
             $self->{metadata}{encoder_resolutions}{$pin} = $capabilities->{$pin}->{PIN_ENCODER+0}->{resolution};
           }
           if ($capabilities->{$pin}->{PIN_SERIAL+0}) {
@@ -401,7 +469,7 @@ sub sysex_handle {
   }
 }
 
-=head2 probe
+=head2 probe ( )
 
 On device boot time we wait 3 seconds for firmware name
 that the target device is using.
@@ -409,6 +477,12 @@ If not received the starting message, then we wait for
 response another 2 seconds and fire requests for version.
 If the response received, then we store protocol version
 and analog mapping and capability.
+
+=over
+
+=item * return on success, C<undef> on error
+
+=back
 
 =cut
 
@@ -445,10 +519,17 @@ sub probe {
   return;
 }
 
-=head2 pin_mode
+=head2 pin_mode ( pin, mode )
 
-Similar to the pinMode function on the
-arduino
+Set mode of Firmata device pin.
+
+=over
+
+=item * parm pin: Firmata device pin
+
+=item * param mode: use a member of constant $BASE from L<Device::Firmata::Constants>
+
+=back
 
 =cut
 
@@ -469,8 +550,10 @@ sub pin_mode {
     };
 
     $mode == PIN_ANALOG and do {
+      my $channel = $self->device_pin_to_analog_channel($pin);
+      die "pin '".$pin."' is not reported as 'ANALOG' channel by Firmata device" unless defined($channel) && $channel >= 0 && $channel <= 0xF;
       $self->{io}->data_write($self->{protocol}->message_prepare( SET_PIN_MODE => 0, $pin, $mode ));
-      $self->{io}->data_write($self->{protocol}->message_prepare( REPORT_ANALOG => $pin, 1 ));
+      $self->{io}->data_write($self->{protocol}->message_prepare( REPORT_ANALOG => $channel, 1 ));
       last;
     };
 
@@ -480,14 +563,19 @@ sub pin_mode {
   return 1;
 }
 
-=head2 digital_write
+=head2 digital_write ( pin, state )
 
-Analogous to the digitalWrite function on the
-arduino
+=over
 
-Deprecation Warning:
-Writing to pin with mode "INPUT" is only supported for backward compatibility
-to switch pullup on and off. Use sub pin_mode with $mode=PIN_PULLUP instead.
+=item * parm pin: Firmata device pin
+
+=item * param state: new state (0 or 1) for digial pin to set on Firmata device
+
+=back
+
+Deprecation warning:
+Writing to pin with mode "PIN_INPUT" is only supported for backward compatibility
+to switch pullup on and off. Use sub L</pin_mode ( pin, mode )> with $mode=PIN_PULLUP instead.
 
 =cut
 
@@ -513,10 +601,15 @@ sub digital_write {
   return 1;
 }
 
-=head2 digital_read
+=head2 digital_read ( pin )
 
-Analogous to the digitalRead function on the
-arduino
+=over
+
+=item * parm pin: Firmata device pin
+
+=item * return last state (0 or 1) of digital pin received from Firmata device
+
+=back
 
 =cut
 
@@ -532,30 +625,43 @@ sub digital_read {
   return ( $port_state & $pin_mask ? 1 : 0 );
 }
 
-=head2 analog_read
+=head2 analog_read ( pin )
 
-Fetches the analog value of a pin
+=over
+
+=item * parm pin: Firmata device pin
+
+=item * return last value of analog pin received from Firmata device
+
+=back
 
 =cut
 
 sub analog_read {
 
   # --------------------------------------------------
-  #
   my ( $self, $pin ) = @_;
   die "pin '".$pin."' is not configured for mode 'ANALOG'" unless $self->is_configured_mode($pin,PIN_ANALOG);
-  return $self->{analog_pins}[$pin];
+  my $channel = $self->device_pin_to_analog_channel($pin);
+  die "pin '".$pin."' is not reported as 'ANALOG' channel by Firmata device" unless defined($channel) && $channel >= 0 && $channel <= 0xF;
+  return $self->{analog_pins}[$channel];
 }
 
-=head2 analog_write
+=head2 analog_write ( pin, value )
+
+=over
+
+=item * parm pin: Firmata device pin
+
+=item * param state: new value for PWM pin to set on Firmata device
+
+=back
 
 =cut
 
 sub analog_write {
 
   # --------------------------------------------------
-  # Sets the PWM value on an arduino
-  #
   my ( $self, $pin, $value ) = @_;
   die "pin '".$pin."' is not configured for mode 'PWM'" unless $self->is_configured_mode($pin,PIN_PWM);
 
@@ -565,9 +671,9 @@ sub analog_write {
   return $self->{io}->data_write($self->{protocol}->message_prepare( ANALOG_MESSAGE => $pin, $byte_0, $byte_1 ));
 }
 
-=head2 pwm_write
+=head2 pwm_write ( pin, value )
 
-pmw_write is an alias for analog_write
+pmw_write ( pin, value ) is an alias for L</analog_write ( pin, value )>
 
 =cut
 
@@ -609,7 +715,7 @@ sub sampling_interval {
   return $self->{io}->data_write($sampling_interval_packet);
 }
 
-sub sysex_send {
+sub sysex_send  {
   my ( $self, @sysex_data ) = @_;
   my $sysex_packet = $self->{protocol}->packet_sysex(@sysex_data);
   return $self->{io}->data_write($sysex_packet);
@@ -646,7 +752,7 @@ sub i2c_config {
 sub servo_write {
 
   # --------------------------------------------------
-  # Sets the SERVO value on an arduino
+  # Sets the SERVO value on an Arduino
   #
   my ( $self, $pin, $value ) = @_;
   die "pin '".$pin."' is not configured for mode 'SERVO'" unless $self->is_configured_mode($pin,PIN_SERVO);
@@ -893,11 +999,11 @@ sub serial_config {
   return $self->{io}->data_write($self->{protocol}->packet_serial_config( $port, $baud, $rxPin, $txPin ));
 }
 
-=head2 poll
+=head2 poll ( )
 
 Call this function every once in a while to
 check up on the status of the comm port, receive
-and process data from the arduino
+and process data from the Firmata device
 
 =cut
 
@@ -911,6 +1017,23 @@ sub poll {
   return $messages;
 }
 
+=head2 observe_digital ( pin, observer, context )
+
+Register callback sub that will be called by L</messages_handle ( messages )>
+if a new value for a digital pin was received from the Firmata device.
+
+=over
+
+=item * parm pin: Firmata device pin
+
+=item * parm observer: callback sub reference with the parameters pin, oldState, newState, context
+
+=item * parm context: context value passed as last parameter to callback sub
+
+=back
+
+=cut
+
 sub observe_digital {
   my ( $self, $pin, $observer, $context ) = @_;
   die "unsupported mode 'INPUT' for pin '".$pin."'" unless ($self->is_supported_mode($pin,PIN_INPUT));
@@ -923,14 +1046,33 @@ sub observe_digital {
   return 1;
 }
 
+=head2 observe_analog ( pin, observer, context )
+
+Register callback sub that will be called by L</messages_handle ( messages )>
+if the value of the analog pin received from the Firmata device has changed.
+
+=over
+
+=item * parm pin: Firmata device pin
+
+=item * parm observer: callback sub reference with the parameters pin, oldValue, newValue, context
+
+=item * parm context: context value passed as last parameter to callback sub
+
+=back
+
+=cut
+
 sub observe_analog {
   my ( $self, $pin, $observer, $context ) = @_;
-  die "unsupported mode 'ANALOG' for pin '".$pin."'" unless ($self->is_supported_mode($pin,PIN_ANALOG));
+  die "pin '".$pin."' is not configured for mode 'ANALOG'" unless $self->is_configured_mode($pin,PIN_ANALOG);
   $self->{analog_observer}[$pin] =  {
       method  => $observer,
       context => $context,
     };
-  $self->{io}->data_write($self->{protocol}->message_prepare( REPORT_ANALOG => $pin, 1 ));
+  my $channel = $self->device_pin_to_analog_channel($pin);
+  die "pin '".$pin."' is not reported as 'ANALOG' channel by Firmata device" unless defined($channel) && $channel >= 0 && $channel <= 0xF;
+  $self->{io}->data_write($self->{protocol}->message_prepare( REPORT_ANALOG => $channel, 1 ));
   return 1;
 }
 
@@ -1017,10 +1159,62 @@ sub is_supported_mode {
   return 1;
 }
 
+=head2 device_pin_to_analog_channel ( pin )
+
+=over
+
+=item * parm pin: Firmata device pin
+
+=item * return analog channel number if analog mapping is available (e.g. by calling L</probe ( )>),
+               C<undef> if given pin is not mapped as an analog channel or
+               given pin if analog mapping is not available
+
+=back
+
+=cut
+
+sub device_pin_to_analog_channel {
+  my ($self,$pin) = @_;
+
+  if (defined $self->{metadata}{analog_mappings}) {
+    my $analog_mappings = $self->{metadata}{analog_mappings};
+    foreach my $channel (keys %$analog_mappings) {
+      if ($analog_mappings->{$channel} == $pin) {
+        return $channel;
+      }
+    }
+    return undef;
+  }
+
+  return $pin;
+}
+
+=head2 is_configured_mode ( pin, mode )
+
+Verify if pin was configured with L</pin_mode ( pin, mode )> for requested mode.
+
+=over
+
+=item * parm pin: Firmata device pin
+
+=item * param mode: use a member of constant $BASE from L<Device::Firmata::Constants>
+
+=item * return 1 on success or C<undef> on error
+
+=back
+
+=cut
+
 sub is_configured_mode {
   my ($self,$pin,$mode) = @_;
   return undef if (!defined $self->{pin_modes}->{$pin} or $self->{pin_modes}->{$pin} != $mode);
   return 1;
 }
+
+=head1 SEE ALSO
+
+L<Device::Firmata::Constants>
+
+=cut
 
 1;

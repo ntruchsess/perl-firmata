@@ -11,17 +11,19 @@ use Device::Firmata::Base
 
 =head1 NAME
 
-Device::Firmata - A Perl implementation of the Firmata protocol.
+Device::Firmata - module for controlling Firmata devices
 
-This module allows a computer running Perl to connect to Firmata devices (Arduinos and compatible, including ESP8266), either via serial IO (RS-232, USB, etc.) or TCP/IP (LAN, WiFi). Protocol details can be found at L<https://github.com/firmata/protocol>.
+=head1 DESCRIPTION
+
+This module allows a computer running Perl to connect to Firmata devices (Arduinos and compatible, including ESP8266), either via serial I/O (RS-232, USB, etc.) or TCP/IP (LAN, WiFi). Protocol details can be found at L<https://github.com/firmata/protocol>.
 
 =head1 VERSION
 
-Version 0.65
+Version 0.69
 
 =cut
 
-our $VERSION = '0.65';
+our $VERSION = '0.69';
 our $DEBUG = 0;
 
 
@@ -76,7 +78,7 @@ sub open {
   return $platform;
 }
 
-=head2 listen ( host, port )
+=head2 listen ( host, port, [opts] )
 
 Start a TCP server bound to given local address and port for the Arduino to connect to. Returns a L<Device::Firmata::IO::NetIO> object. An implementation example can be found in file F<examples/example-tcpserver.pl>.
 
@@ -96,11 +98,11 @@ sub listen {
 
 =head1 EXAMPLES
 
-In the folder F<examples> you will find more than 15 implementation examples for various Firmata IO operations including digital I/O, PWM, stepper and encoder as well as bus I/O for I2C and 1-Wire.
+In the folder F<examples> you will find more than 15 implementation examples for various Firmata I/O operations including digital I/O, PWM, stepper and encoder as well as bus I/O for I2C and 1-Wire.
 
 =head1 SEE ALSO
 
-L<Device::Firmata::Base>
+L<Device::Firmata::Platform>
 
 =head1 LICENSE
 
@@ -113,7 +115,7 @@ Copyright (C) 2016 Jens B.
 This is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
-See http://dev.perl.org/licenses/ for more information.
+See L<http://dev.perl.org/licenses/> for more information.
 
 =cut
 

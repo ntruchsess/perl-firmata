@@ -1,2 +1,9 @@
 ^.*~$
-MANIFEST.SKIP
+.*\.bak$
+.*\.tar\.gz$
+^.git
+^examples/LiquidCrystal_I2C.pm$
+^examples/example_LCD_I2C.pl$
+^Makefile$
+^Makefile\.old$
+^MYMETA.*

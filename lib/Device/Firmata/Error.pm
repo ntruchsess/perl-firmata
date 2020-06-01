@@ -1,9 +1,14 @@
 package Device::Firmata::Error;
-# ==================================================================
 
 =head1 NAME
 
-Device::Firmata::Error - Error handlers
+Device::Firmata::Error - error reporting
+
+=head1 DESCRIPTION
+
+Intendend for module internal error reporting.
+
+Implementation Status: experimental, unused
 
 =cut
 
@@ -25,6 +30,7 @@ use Device::Firmata::Base;
 
 $FIRMATA_ERROR_DEFAULT = -1;
 
+=head1 METHODS
 
 =head2 error
 
@@ -78,7 +84,6 @@ sub error {
 
     return $text;
 }
-
 
 =head2 errors_flush
 
