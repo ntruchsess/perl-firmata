@@ -1,5 +1,8 @@
 Revision history for Device-Firmata
 
+0.70    2025.12.23 - Graham Knop
+        - fixed Device::Firmata::Base::import by removing call to SUPER::import
+
 0.69    2020.06.01 - Jens B.
         - fix analog channel mapping in method pin_mode, analog_read and observe_analog of Device::Firmata::Platform
         - added method close() to Device::Firmata::IO::SerialIO
