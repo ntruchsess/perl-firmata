@@ -58,8 +58,6 @@ sub import {
          __PACKAGE__;
       *{$pkg.'::ISA'} = \@ISA;
     }
-    use strict;
-    $self->SUPER::import( @_ );
   }
 }
 
