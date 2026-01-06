@@ -538,6 +538,7 @@ sub pin_mode {
   # --------------------------------------------------
   my ( $self, $pin, $mode ) = @_;
 
+  die "pin undefined in call to pin_mode() with mode '".$mode."'" unless defined($pin);
   die "unsupported mode '".$mode."' for pin '".$pin."'" unless $self->is_supported_mode($pin,$mode);
 
   PIN_MODE_HANDLER: {
@@ -583,7 +584,10 @@ sub digital_write {
 
   # --------------------------------------------------
   my ( $self, $pin, $state ) = @_;
+
+  die "pin undefined in call to digital_write()" unless defined($pin);
   die "pin '".$pin."' is not configured for mode 'INPUT', 'PULLUP' or 'OUTPUT'" unless ($self->is_configured_mode($pin,PIN_OUTPUT) or $self->is_configured_mode($pin,PIN_INPUT) or $self->is_configured_mode($pin,PIN_PULLUP));
+
   my $port_number = $pin >> 3;
 
   my $pin_offset = $pin % 8;
@@ -617,7 +621,10 @@ sub digital_read {
 
   # --------------------------------------------------
   my ( $self, $pin ) = @_;
+
+  die "pin undefined in call to digital_read()" unless defined($pin);
   die "pin '".$pin."' is not configured for mode 'INPUT' or 'PULLUP'" unless ($self->is_configured_mode($pin,PIN_INPUT) or $self->is_configured_mode($pin,PIN_PULLUP));
+
   my $port_number = $pin >> 3;
   my $pin_offset  = $pin % 8;
   my $pin_mask    = 1 << $pin_offset;
@@ -641,7 +648,10 @@ sub analog_read {
 
   # --------------------------------------------------
   my ( $self, $pin ) = @_;
+
+  die "pin undefined in call to analog_read()" unless defined($pin);
   die "pin '".$pin."' is not configured for mode 'ANALOG'" unless $self->is_configured_mode($pin,PIN_ANALOG);
+
   my $channel = $self->device_pin_to_analog_channel($pin);
   die "pin '".$pin."' is not reported as 'ANALOG' channel by Firmata device" unless defined($channel) && $channel >= 0 && $channel <= 0xF;
   return $self->{analog_pins}[$channel];
@@ -663,6 +673,8 @@ sub analog_write {
 
   # --------------------------------------------------
   my ( $self, $pin, $value ) = @_;
+
+  die "pin undefined in call to analog_write()" unless defined($pin);
   die "pin '".$pin."' is not configured for mode 'PWM'" unless $self->is_configured_mode($pin,PIN_PWM);
 
   # FIXME: 8 -> 7 bit translation should be done in the protocol module
@@ -755,6 +767,8 @@ sub servo_write {
   # Sets the SERVO value on an Arduino
   #
   my ( $self, $pin, $value ) = @_;
+
+  die "pin undefined in call to servo_write()" unless defined($pin);
   die "pin '".$pin."' is not configured for mode 'SERVO'" unless $self->is_configured_mode($pin,PIN_SERVO);
 
   # FIXME: 8 -> 7 bit translation should be done in the protocol module
@@ -765,7 +779,10 @@ sub servo_write {
 
 sub servo_config {
   my ( $self, $pin, $args ) = @_;
+
+  die "pin undefined in call to servo_config()" unless defined($pin);
   die "pin '".$pin."' is not configured for mode 'SERVO'" unless $self->is_configured_mode($pin,PIN_SERVO);
+
   return $self->{io}->data_write($self->{protocol}->packet_servo_config_request($pin,$args));
 }
 
@@ -883,19 +900,28 @@ sub scheduler_query_task {
 
 sub onewire_search {
   my ( $self, $pin ) = @_;
+
+  die "pin undefined in call to onewire_search()" unless defined($pin);
   die "pin '".$pin."' is not configured for mode 'ONEWIRE'" unless $self->is_configured_mode($pin,PIN_ONEWIRE);
+
   return $self->{io}->data_write($self->{protocol}->packet_onewire_search_request( $pin ));
 }
 
 sub onewire_search_alarms {
   my ( $self, $pin ) = @_;
+
+  die "pin undefined in call to onewire_search_alarms()" unless defined($pin);
   die "pin '".$pin."' is not configured for mode 'ONEWIRE'" unless $self->is_configured_mode($pin,PIN_ONEWIRE);
+
   return $self->{io}->data_write($self->{protocol}->packet_onewire_search_alarms_request( $pin ));
 }
 
 sub onewire_config {
   my ( $self, $pin, $power ) = @_;
+
+  die "pin undefined in call to onewire_config()" unless defined($pin);
   die "pin '".$pin."' is not configured for mode 'ONEWIRE'" unless $self->is_configured_mode($pin,PIN_ONEWIRE);
+
   return $self->{io}->data_write($self->{protocol}->packet_onewire_config_request( $pin, $power ));
 }
 
@@ -926,7 +952,10 @@ sub onewire_write {
 
 sub onewire_command_series {
   my ( $self, $pin, $args ) = @_;
+
+  die "pin undefined in call to onewire_command_series()" unless defined($pin);
   die "pin '".$pin."' is not configured for mode 'ONEWIRE'" unless $self->is_configured_mode($pin,PIN_ONEWIRE);
+
   return $self->{io}->data_write($self->{protocol}->packet_onewire_request( $pin, $args ));
 }
 
@@ -1155,7 +1184,7 @@ sub observe_string {
 
 sub is_supported_mode {
   my ($self,$pin,$mode) = @_;
-  return undef if (defined $self->{metadata}->{capabilities} and (!(defined $self->{metadata}->{capabilities}->{$pin}) or !(defined $self->{metadata}->{capabilities}->{$pin}->{$mode})));
+  return undef if (!defined($pin) || (defined $self->{metadata}->{capabilities} && (!(defined $self->{metadata}->{capabilities}->{$pin}) || !(defined $self->{metadata}->{capabilities}->{$pin}->{$mode}))));
   return 1;
 }
 
@@ -1207,7 +1236,7 @@ Verify if pin was configured with L</pin_mode ( pin, mode )> for requested mode.
 
 sub is_configured_mode {
   my ($self,$pin,$mode) = @_;
-  return undef if (!defined $self->{pin_modes}->{$pin} or $self->{pin_modes}->{$pin} != $mode);
+  return undef if (!defined($pin) || !defined $self->{pin_modes}->{$pin} || $self->{pin_modes}->{$pin} != $mode);
   return 1;
 }
 

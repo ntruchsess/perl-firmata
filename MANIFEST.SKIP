@@ -1,9 +1,14 @@
 ^.*~$
-.*\.bak$
+\.bak$
+\.sh$
 .*\.tar\.gz$
 ^.git
+^blib
+^_build
 ^examples/LiquidCrystal_I2C.pm$
 ^examples/example_LCD_I2C.pl$
+^pm_to_blib$
 ^Makefile$
 ^Makefile\.old$
+^MANIFEST\.SKIP$
 ^MYMETA.*
