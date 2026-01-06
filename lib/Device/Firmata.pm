@@ -19,11 +19,11 @@ This module allows a computer running Perl to connect to Firmata devices (Arduin
 
 =head1 VERSION
 
-Version 0.70
+Version 0.71
 
 =cut
 
-our $VERSION = '0.70';
+our $VERSION = '0.71';
 our $DEBUG = 0;
 
 

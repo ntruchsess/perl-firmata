@@ -1,5 +1,8 @@
 Revision history for Device-Firmata
 
+0.71    2026.01.05 - Jens B.
+        - die instead of causing Perl warning when calling subs of Device::Firmata::Platform with undefined pin parameter
+
 0.70    2025.12.23 - Graham Knop
         - fixed Device::Firmata::Base::import by removing call to SUPER::import
 
